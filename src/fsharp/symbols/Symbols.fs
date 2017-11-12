@@ -846,6 +846,12 @@ and FSharpField(cenv: cenv, d: FSharpFieldData)  =
         | Choice1Of2 r -> r.Name
         | Choice2Of2 f -> f.FieldName
 
+    member __.IsNameGenerated =
+        if isUnresolved() then false else
+        match d.TryRecdField with
+        | Choice1Of2 r -> r.rfield_name_generated
+        | _ -> false
+
     member __.IsCompilerGenerated = 
         if isUnresolved() then false else 
         match d.TryRecdField with 
