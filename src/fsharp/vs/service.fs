@@ -1500,7 +1500,7 @@ module internal Parser =
     // Adding this new-line character at the end of the source seems odd but is required for some unit tests
     // Todo: fix tests
     let addNewLine (source: string) =
-        if source.Length = 0 || not (source.[source.Length - 1] = '\n') then source + "\n" else source
+        source
 
     let matchBraces(source, fileName, options: FSharpParsingOptions, userOpName: string) =
         Trace.TraceInformation("FCS: {0}.{1} ({2})", userOpName, "matchBraces", fileName)
