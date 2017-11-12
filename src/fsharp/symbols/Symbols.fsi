@@ -931,7 +931,10 @@ and [<Class>] internal FSharpActivePatternCase =
     inherit FSharpSymbol
 
     /// The name of the active pattern case 
-    member Name: string 
+    member Name: string
+
+    /// Case index in the active pattern group
+    member Index: int
 
     /// The location of declaration of the active pattern case 
     member DeclarationLocation : range 
@@ -962,6 +965,8 @@ and [<Class>] internal FSharpActivePatternGroup =
 
     /// Try to get the enclosing entity of the active pattern
     member EnclosingEntity : FSharpEntity option
+
+    member Name: string option
 
 #if COMPILER_PUBLIC_API
 and [<Class>] FSharpType =

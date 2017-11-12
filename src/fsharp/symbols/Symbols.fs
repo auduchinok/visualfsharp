@@ -915,6 +915,8 @@ and FSharpActivePatternCase(cenv, apinfo: PrettyNaming.ActivePatternInfo, typ, n
 
     member __.Name = apinfo.ActiveTags.[n]
 
+    member __.Index = n
+
     member __.DeclarationLocation = snd apinfo.ActiveTagsWithRanges.[n]
 
     member __.Group = FSharpActivePatternGroup(cenv, apinfo, typ, valOpt)
@@ -946,6 +948,8 @@ and FSharpActivePatternGroup(cenv, apinfo:PrettyNaming.ActivePatternInfo, typ, v
             match vref.ActualParent with 
             | ParentNone -> None
             | Parent p -> Some (FSharpEntity(cenv, p)))
+
+    member __.Name = valOpt |> Option.map (fun vref -> vref.LogicalName)
 
 and FSharpGenericParameter(cenv, v:Typar) = 
 
