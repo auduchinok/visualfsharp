@@ -1028,6 +1028,9 @@ and [<Class>] internal FSharpType =
     /// if it is an instantiation of a generic type.
     member BaseType : FSharpType option
 
+    member IsUnit: bool
+    member IsNativePtr: bool
+
     member StrippedType: FSharpType // todo: in case of nativeptr cals real compiled type instead
 
     member QualifiedBaseName: string
