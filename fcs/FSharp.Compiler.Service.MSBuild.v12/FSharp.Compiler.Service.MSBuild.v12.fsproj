@@ -29,6 +29,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DefineConstants>$(DefineConstants);CROSS_PLATFORM_COMPILER</DefineConstants>
     <DefineConstants>$(DefineConstants);ENABLE_MONO_SUPPORT</DefineConstants>
+    <DefineConstants>$(DefineConstants);COMPILER_PUBLIC_API</DefineConstants>
     <OtherFlags>$(OtherFlags) /warnon:1182</OtherFlags>
     <OtherFlags>$(OtherFlags) --version:$(VersionPrefix).0</OtherFlags>
     <!-- We target .NET 4.5 for FSharp.Compiler.Service.dll to allow broader use of this DLL -->
