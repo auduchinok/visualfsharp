@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
-
-module internal Microsoft.FSharp.Compiler.MSBuildReferenceResolver 
+#if COMPILER_PUBLIC_API
+module Microsoft.FSharp.Compiler.MSBuildReferenceResolver
+#else
+module internal Microsoft.FSharp.Compiler.MSBuildReferenceResolver
+#endif
 
     open System
     open System.IO
