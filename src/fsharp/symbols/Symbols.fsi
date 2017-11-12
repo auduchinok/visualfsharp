@@ -890,6 +890,7 @@ and [<Class>] internal FSharpMemberOrFunctionOrValue =
     /// Indicates if this is a constructor.
     member IsConstructor : bool
 
+    member IsRefCell : bool
 
 /// A subtype of FSharpSymbol that represents a parameter 
 #if COMPILER_PUBLIC_API
