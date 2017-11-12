@@ -3298,6 +3298,9 @@ and
     /// Indicates if this is an F#-defined 'new' constructor member
     member x.IsConstructor              = x.Deref.IsConstructor
 
+    /// Indicates if this is an static constructor member
+    member x.IsClassConstructor         = x.Deref.IsClassConstructor
+
     /// Indicates if this value was a member declared 'override' or an implementation of an interface slot
     member x.IsOverrideOrExplicitImpl   = x.Deref.IsOverrideOrExplicitImpl
 
