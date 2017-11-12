@@ -2158,6 +2158,11 @@ and FSharpParameter(cenv, typ:TType, topArgInfo:ArgReprInfo, mOpt, isParamArrayA
     member __.IsParamArrayArg = isParamArrayArg
     member __.IsOutArg = isOutArg
     member __.IsOptionalArg = isOptionalArg
+
+    // todo: cover IL attrs? use different name? (we need it for symbols defined in F# source only)
+    member __.IsCliOptional = HasFSharpAttributeOpt cenv.g cenv.g.attrib_OptionalAttribute attribs
+    member __.IsParamArray = HasFSharpAttribute cenv.g cenv.g.attrib_ParamArrayAttribute attribs
+    member __.IsOut = HasFSharpAttribute cenv.g cenv.g.attrib_OutAttribute attribs 
     
     member private x.ValReprInfo = topArgInfo
 
