@@ -561,7 +561,7 @@ type FSharpDeclarationListInfo<'T>(declarations: FSharpDeclarationListItem<'T>[]
     member __.IsError = isError
 
     // Make a 'Declarations' object for a set of selected items
-    static member Create(infoReader:InfoReader, m, denv, getAccessibility, items: CompletionItem list, reactor, currentNamespaceOrModule: string[] option, isAttributeApplicationContext: bool, checkAlive) = 
+    static member Create(infoReader:InfoReader, m, denv, getAccessibility, unresolvedOnly: bool, items: CompletionItem list, reactor, currentNamespaceOrModule: string[] option, isAttributeApplicationContext: bool, checkAlive) = 
         let g = infoReader.g
         let isForType = items |> List.exists (fun x -> x.Type.IsSome)
         let items = items |> SymbolHelpers.RemoveExplicitlySuppressedCompletionItems g
@@ -634,7 +634,7 @@ type FSharpDeclarationListInfo<'T>(declarations: FSharpDeclarationListItem<'T>[]
                     
         let decls = 
             items 
-            |> List.map (fun (displayName, itemsWithSameFullName) -> 
+            |> List.choose (fun (displayName, itemsWithSameFullName) -> 
                 match itemsWithSameFullName with
                 | [] -> failwith "Unexpected empty bag"
                 | _ ->
@@ -686,9 +686,10 @@ type FSharpDeclarationListInfo<'T>(declarations: FSharpDeclarationListItem<'T>[]
                             | [||] -> None
                             | ns -> Some (ns |> String.concat "."))
 
-                    FSharpDeclarationListItem(
-                        name, nameInCode, fullName, glyph, Choice1Of2 (items, infoReader, m, denv, reactor, checkAlive), getAccessibility item.Item, 
-                        item.Kind, item.IsOwnMember, item.MinorPriority, item.Unresolved.IsNone, namespaceToOpen))
+                    if unresolvedOnly && namespaceToOpen.IsNone then None else
+                    Some (FSharpDeclarationListItem(
+                            name, nameInCode, fullName, glyph, Choice1Of2 (items, infoReader, m, denv, reactor, checkAlive), getAccessibility item.Item, 
+                            item.Kind, item.IsOwnMember, item.MinorPriority, item.Unresolved.IsNone, namespaceToOpen)))
 
         new FSharpDeclarationListInfo<'T>(Array.ofList decls, isForType, false)
     

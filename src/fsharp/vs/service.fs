@@ -926,7 +926,7 @@ type TypeCheckInfo
         scope.IsRelativeNameResolvable(cursorPos, plid, symbol.Item)
         
     /// Get the auto-complete items at a location
-    member __.GetDeclarations (ctok, parseResultsOpt, line, lineStr, partialName, getAllSymbols, getAdditionalInfo, shortTypeNames, hasTextChangedSinceLastTypecheck) =
+    member __.GetDeclarations (ctok, parseResultsOpt, line, lineStr, partialName, getAllSymbols, getAdditionalInfo, shortTypeNames, unresolvedOnly, hasTextChangedSinceLastTypecheck) =
         let isInterfaceFile = SourceFileImpl.IsInterfaceFile mainInputFileName
         ErrorScope.Protect Range.range0 
             (fun () ->
@@ -946,7 +946,7 @@ type TypeCheckInfo
                         |> Option.bind (fun x -> x.ParseTree)
                         |> Option.map (fun parsedInput -> UntypedParseImpl.GetFullNameOfSmallestModuleOrNamespaceAtPoint(parsedInput, mkPos line 0))
                     let isAttributeApplication = ctx = Some CompletionContext.AttributeApplication
-                    FSharpDeclarationListInfo.Create(infoReader,m,denv,getAdditionalInfo,items,reactorOps,currentNamespaceOrModule,isAttributeApplication,checkAlive))
+                    FSharpDeclarationListInfo.Create(infoReader,m,denv,getAdditionalInfo,unresolvedOnly, items,reactorOps,currentNamespaceOrModule,isAttributeApplication,checkAlive))
             (fun msg -> 
                 Trace.TraceInformation(sprintf "FCS: recovering from error in GetDeclarations: '%s'" msg)
                 FSharpDeclarationListInfo.Error msg)
@@ -1921,14 +1921,15 @@ type FSharpCheckFileResults(filename: string, errors: FSharpErrorInfo[], scopeOp
     member info.HasFullTypeCheckInfo = details.IsSome
 
     /// Intellisense autocompletions
-    member info.GetDeclarationListInfo(parseResultsOpt, line, lineStr, partialName, ?getAllEntities, ?getAdditionalInfo: (FSharpSymbol * FSharpDisplayContext -> 'T option), ?shortTypeNames, ?hasTextChangedSinceLastTypecheck, ?userOpName: string) =
+    member info.GetDeclarationListInfo(parseResultsOpt, line, lineStr, partialName, ?getAllEntities, ?getAdditionalInfo: (FSharpSymbol * FSharpDisplayContext -> 'T option), ?shortTypeNames, ?unresolvedOnly, ?hasTextChangedSinceLastTypecheck, ?userOpName: string) =
         let userOpName = defaultArg userOpName "Unknown"
         let getAllEntities = defaultArg getAllEntities (fun _ -> [])
         let getAdditionalInfo = defaultArg getAdditionalInfo (fun _ -> None)
         let shortTypeNames = defaultArg shortTypeNames false
+        let unresolvedOnly = defaultArg unresolvedOnly false
         let hasTextChangedSinceLastTypecheck = defaultArg hasTextChangedSinceLastTypecheck (fun _ -> false)
         reactorOp userOpName "GetDeclarations" FSharpDeclarationListInfo.Empty (fun ctok scope -> 
-            scope.GetDeclarations(ctok, parseResultsOpt, line, lineStr, partialName, getAllEntities, getAdditionalInfo, shortTypeNames, hasTextChangedSinceLastTypecheck))
+            scope.GetDeclarations(ctok, parseResultsOpt, line, lineStr, partialName, getAllEntities, getAdditionalInfo, shortTypeNames, unresolvedOnly, hasTextChangedSinceLastTypecheck))
 
     member info.GetDeclarationListSymbols(parseResultsOpt, line, lineStr, partialName, ?hasTextChangedSinceLastTypecheck, ?userOpName: string) = 
         let userOpName = defaultArg userOpName "Unknown"

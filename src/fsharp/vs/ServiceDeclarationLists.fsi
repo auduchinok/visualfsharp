@@ -79,7 +79,7 @@ type internal FSharpDeclarationListInfo<'T> =
     member IsError : bool
 
     // Implementation details used by other code in the compiler    
-    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * getAdditionalInfo:(Item -> 'T option) * items:CompletionItem list * reactor:IReactorOperations * currentNamespace:string[] option * isAttributeApplicationContex:bool * checkAlive:(unit -> bool) -> FSharpDeclarationListInfo<'T>
+    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * getAdditionalInfo:(Item -> 'T option) * unresolvedOnly: bool * items:CompletionItem list * reactor:IReactorOperations * currentNamespace:string[] option * isAttributeApplicationContex:bool * checkAlive:(unit -> bool) -> FSharpDeclarationListInfo<'T>
 
     static member internal Error : message:string -> FSharpDeclarationListInfo<'T>
 
