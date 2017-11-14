@@ -336,6 +336,8 @@ and [<Class>] internal FSharpEntity =
     /// Get all active pattern cases defined in all active patterns in the module.
     member ActivePatternCases : FSharpActivePatternCase list
 
+    member IsOptionalAttribute: bool
+
 /// Represents a delegate signature in an F# symbol
 #if COMPILER_PUBLIC_API
 and [<Class>] FSharpDelegateSignature =
@@ -817,6 +819,8 @@ and [<Class>] internal FSharpMemberOrFunctionOrValue =
 
     /// Indicates if this is a setter method for a property, or a use of a property in setter mode
     member IsPropertySetterMethod: bool 
+
+    member AccessorProperty: FSharpMemberOrFunctionOrValue option
 
     /// Indicates if this is an add method for an event
     member IsEventAddMethod: bool 

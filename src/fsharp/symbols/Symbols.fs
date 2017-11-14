@@ -640,6 +640,12 @@ and FSharpEntity(cenv:cenv, entity:EntityRef) =
                 let item = Item.ActivePatternCase apref
                 FSharpActivePatternCase(cenv, apref.ActivePatternInfo, apref.ActivePatternVal.Type, apref.CaseIndex, Some apref.ActivePatternVal, item))
 
+    member x.IsOptionalAttribute =
+        isResolved() &&
+        match entity.TypeAbbrev with
+        | Some (TType.TType_app(tref, _)) when tref.Stamp = cenv.g.attrib_OptionalArgumentAttribute.TyconRef.Stamp -> true
+        | _ -> false
+
     override x.Equals(other: obj) =
         box x === other ||
         match other with
@@ -1505,6 +1511,18 @@ and FSharpMemberOrFunctionOrValue(cenv, d:FSharpMemberOrValData, item) =
             not (isNil (GetImmediateIntrinsicPropInfosOfType(Some propName, AccessibleFromSomeFSharpCode) cenv.g cenv.amap range0 (generalizedTyconRef m.DeclaringEntityRef)))
         | V v -> v.IsPropertySetterMethod
         | _ -> false
+
+    member __.AccessorProperty =
+        let makeProp p vref =
+            let pinfo = FSProp(cenv.g, p, Some vref, None)
+            FSharpMemberOrFunctionOrValue(cenv, P pinfo, Item.Property (pinfo.PropertyName, [pinfo]))
+        if isUnresolved() then None else 
+        match d with
+        | M (FSMeth (_, p, vref, _)) when vref.IsPropertyGetterMethod || vref.IsPropertySetterMethod ->
+            Some (makeProp p vref)
+        | V vref when vref.IsPropertyGetterMethod || vref.IsPropertySetterMethod ->
+            vref.MemberInfo |> Option.map (fun memInfo -> makeProp (generalizedTyconRef memInfo.ApparentParent) vref)
+        | _ -> None
 
     member __.IsInstanceMember = 
         if isUnresolved() then false else 
