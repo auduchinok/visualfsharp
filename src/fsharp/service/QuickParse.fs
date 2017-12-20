@@ -3,6 +3,7 @@
 namespace Microsoft.FSharp.Compiler
 
 open System
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 /// Qualified long name.
@@ -11,16 +12,16 @@ type PartialLongName =
       QualifyingIdents: string list
       
       /// Last part of long ident.
-      PartialIdent: string
+      PartialIdent: string option
       
-      /// The column number at the end of full partial name.
-      EndColumn: int
+      /// The coords at the end of full partial name.
+      EndCoords: pos
 
       /// Position of the last dot.
       LastDotPos: int option }
     
     /// Empty patial long name.
-    static member Empty(endColumn: int) = { QualifyingIdents = []; PartialIdent = ""; EndColumn = endColumn; LastDotPos = None }
+    static member Empty(endPos: pos) = { QualifyingIdents = []; PartialIdent = None; EndCoords = endPos; LastDotPos = None }
 
 /// Methods for cheaply and innacurately parsing F#.
 ///
@@ -215,28 +216,29 @@ module QuickParse =
 
     /// Get the partial long name of the identifier to the left of index.
     /// For example, for `System.DateTime.Now` it returns PartialLongName ([|"System"; "DateTime"|], "Now", Some 32), where "32" pos of the last dot.
-    let GetPartialLongNameEx(lineStr: string, index: int) : PartialLongName =
-        if isNull lineStr then PartialLongName.Empty(index)
-        elif index < 0 then PartialLongName.Empty(index)
-        elif index >= lineStr.Length then PartialLongName.Empty(index)
+    let GetPartialLongNameEx(lineStr: string, coords: pos) : PartialLongName =
+        let column = coords.Column
+        if isNull lineStr then PartialLongName.Empty(coords)
+        elif column < 0 then PartialLongName.Empty(coords)
+        elif column >= lineStr.Length then PartialLongName.Empty(coords)
         else
             let IsIdentifierPartCharacter pos = IsIdentifierPartCharacter lineStr.[pos]
             let IsIdentifierStartCharacter pos = IsIdentifierPartCharacter pos
             let IsDot pos = lineStr.[pos] = '.'
             let IsTick pos = lineStr.[pos] = '`'
-            let IsEndOfComment pos = pos < index - 1 && lineStr.[pos] = '*' && lineStr.[pos + 1] = ')'
-            let IsStartOfComment pos = pos < index - 1 && lineStr.[pos] = '(' && lineStr.[pos + 1] = '*'
+            let IsEndOfComment pos = pos < column - 1 && lineStr.[pos] = '*' && lineStr.[pos + 1] = ')'
+            let IsStartOfComment pos = pos < column - 1 && lineStr.[pos] = '(' && lineStr.[pos + 1] = '*'
             let IsWhitespace pos = Char.IsWhiteSpace(lineStr.[pos])
 
             let rec SkipWhitespaceBeforeDotIdentifier(pos, ident, current, throwAwayNext, lastDotPos) =
-                if pos > index then PartialLongName.Empty(index)  // we're in whitespace after an identifier, if this is where the cursor is, there is no PLID here
+                if pos > column then PartialLongName.Empty(coords)  // we're in whitespace after an identifier, if this is where the cursor is, there is no PLID here
                 elif IsWhitespace pos then SkipWhitespaceBeforeDotIdentifier(pos+1,ident,current,throwAwayNext,lastDotPos)
                 elif IsDot pos then AtStartOfIdentifier(pos+1,ident::current,throwAwayNext, Some pos)
                 elif IsStartOfComment pos then EatComment(1, pos + 1, EatCommentCallContext.SkipWhiteSpaces(ident, current, throwAwayNext), lastDotPos)
                 else AtStartOfIdentifier(pos,[],false,None) // Throw away what we have and start over.
 
             and EatComment (nesting, pos, callContext,lastDotPos) = 
-                if pos > index then PartialLongName.Empty(index) else
+                if pos > column then PartialLongName.Empty(coords) else
                 if IsStartOfComment pos then
                     // track balance of closing '*)'
                     EatComment(nesting + 1, pos + 2, callContext,lastDotPos)
@@ -257,13 +259,13 @@ module QuickParse =
                     EatComment(nesting, pos + 1, callContext, lastDotPos)
 
             and InUnquotedIdentifier(left:int,pos:int,current,throwAwayNext,lastDotPos) =
-                if pos > index then 
+                if pos > column then 
                     if throwAwayNext then 
-                        PartialLongName.Empty(index) 
+                        PartialLongName.Empty(coords) 
                     else
                         { QualifyingIdents = current
-                          PartialIdent = lineStr.Substring(left,pos-left)
-                          EndColumn = index
+                          PartialIdent = lineStr.Substring(left, pos - left)
+                          EndCoords = coords
                           LastDotPos = lastDotPos }
                 else
                     if IsIdentifierPartCharacter pos then InUnquotedIdentifier(left,pos+1,current,throwAwayNext,lastDotPos)
@@ -276,13 +278,13 @@ module QuickParse =
                     else AtStartOfIdentifier(pos,[],false,None) // Throw away what we have and start over.
 
             and InQuotedIdentifier(left:int,pos:int, current,throwAwayNext,lastDotPos) =
-                if pos > index then 
+                if pos > column then 
                     if throwAwayNext then 
-                        PartialLongName.Empty(index) 
+                        PartialLongName.Empty(coords) 
                     else 
                         { QualifyingIdents = current
                           PartialIdent = lineStr.Substring(left,pos-left)
-                          EndColumn = index
+                          EndCoords = coords
                           LastDotPos = lastDotPos }
                 else
                     let remainingLength = lineStr.Length - pos
@@ -292,13 +294,13 @@ module QuickParse =
                     else InQuotedIdentifier(left,pos+1,current,throwAwayNext,lastDotPos)                    
 
             and AtStartOfIdentifier(pos:int, current, throwAwayNext, lastDotPos: int option) =
-                if pos > index then 
+                if pos > column then 
                     if throwAwayNext then 
-                        PartialLongName.Empty(index)
+                        PartialLongName.Empty(coords)
                     else 
                         { QualifyingIdents = current
-                          PartialIdent = ""
-                          EndColumn = index
+                          PartialIdent = None
+                          EndCoords = coords
                           LastDotPos = lastDotPos }
                 else
                     if IsWhitespace pos then AtStartOfIdentifier(pos+1,current,throwAwayNext, lastDotPos)
@@ -325,34 +327,32 @@ module QuickParse =
                                 AtStartOfIdentifier(pos+1,""::current,throwAwayNext, Some pos)
                         else AtStartOfIdentifier(pos+1,[],throwAwayNext, None)
             let partialLongName = AtStartOfIdentifier(0, [], false, None) 
-            
+
             match List.rev partialLongName.QualifyingIdents with
-            | s :: _ when s.Length > 0 && Char.IsDigit(s.[0]) -> PartialLongName.Empty(index)  // "2.0" is not a longId (this might not be right for ``2.0`` but good enough for common case)
+            | s :: _ when s.Length > 0 && Char.IsDigit(s.[0]) -> PartialLongName.Empty(coords)  // "2.0" is not a longId (this might not be right for ``2.0`` but good enough for common case)
             | plid -> { partialLongName with QualifyingIdents = plid }
-    
-    let TokenNameEquals (tokenInfo: FSharpTokenInfo) (token2: string) = 
-        String.Compare(tokenInfo .TokenName, token2, StringComparison.OrdinalIgnoreCase) = 0  
-    
+
+    let TokenNameEquals (tokenInfo: FSharpTokenInfo) (token2: string) =
+        String.Compare(tokenInfo .TokenName, token2, StringComparison.OrdinalIgnoreCase) = 0
+
     // The prefix of the sequence of token names to look for in TestMemberOrOverrideDeclaration, in reverse order
     let private expected = [ [|"dot"|]; [|"ident"|]; [|"member"; "override"|] ]
 
     /// Tests whether the user is typing something like "member x." or "override (*comment*) x."
     let TestMemberOrOverrideDeclaration (tokens: FSharpTokenInfo[]) =
-        let filteredReversed = 
-            tokens 
+        let filteredReversed =
+            tokens
             |> Array.filter (fun tok ->
                 // cut out whitespaces\comments\access modifiers
-                not (TokenNameEquals tok "comment") && 
+                not (TokenNameEquals tok "comment") &&
                 not (TokenNameEquals tok "whitespace") &&
                 not (TokenNameEquals tok "private") &&
                 not (TokenNameEquals tok "internal") &&
-                not (TokenNameEquals tok "public")
-                ) 
+                not (TokenNameEquals tok "public"))
             |> Array.rev
-        
+
         if filteredReversed.Length < expected.Length then false
-        else 
+        else
             // check whether sequences match
             (filteredReversed, expected) ||> Seq.forall2 (fun tok expect ->
-                expect |> Array.exists (TokenNameEquals tok) )
-                        
+                expect |> Array.exists (TokenNameEquals tok))
