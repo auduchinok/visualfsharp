@@ -1,6 +1,7 @@
 ﻿// Open the namespace with InteractiveChecker type
 open System
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.QuickParse
 
@@ -37,7 +38,7 @@ let tip = parsed.GetToolTipText(2, 7, inputLines.[1], [ "foo" ], identTokenTag)
 
 printfn "%A" tip
 
-let partialName = GetPartialLongNameEx(inputLines.[4], 23)
+let partialName = GetPartialLongNameEx(inputLines.[4], mkPos 5 23)
 
 // Get declarations (autocomplete) for a location
 let decls = 

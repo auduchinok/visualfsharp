@@ -82,8 +82,9 @@ module UnusedOpens =
              | :? FSharpMemberOrFunctionOrValue as fv when fv.IsExtensionMember -> 
                 // extension members should be taken into account even though they have a prefix (as they do most of the time)
                 true
-             | _ -> 
-                let partialName = QuickParse.GetPartialLongNameEx (getSourceLineStr su.RangeAlternate.StartLine, su.RangeAlternate.EndColumn - 1)
+             | _ ->
+                let pos = mkPos su.RangeAlternate.StartLine (su.RangeAlternate.EndColumn - 1)
+                let partialName = QuickParse.GetPartialLongNameEx (getSourceLineStr su.RangeAlternate.StartLine, pos)
                 // for the rest of symbols we pick only those which are the first part of a long idend, because it's they which are
                 // conteined in opened namespaces / modules. For example, we pick `IO` from long ident `IO.File.OpenWrite` because
                 // it's `open System` which really brings it into scope.

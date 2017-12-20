@@ -32,6 +32,7 @@ open FsUnit
 open System
 open System.IO
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Compiler.Service.Tests.Common
 
@@ -86,7 +87,7 @@ let ``Intro test`` () =
     let tip = typeCheckResults.GetToolTipText(4, 7, inputLines.[1], ["foo"], identToken) |> Async.RunSynchronously
     // (sprintf "%A" tip).Replace("\n","") |> shouldEqual """FSharpToolTipText [Single ("val foo : unit -> unitFull name: Test.foo",None)]"""
     // Get declarations (autocomplete) for a location
-    let partialName = { QualifyingIdents = []; PartialIdent = "msg"; EndColumn = 22; LastDotPos = None }
+    let partialName = { QualifyingIdents = []; PartialIdent = Some "msg"; EndCoords = mkPos 7 22; LastDotPos = None }
     let decls =  typeCheckResults.GetDeclarationListInfo(Some parseResult, 7, inputLines.[6], partialName, (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
     CollectionAssert.AreEquivalent(stringMethods,[ for item in decls.Items -> item.Name ])
     // Get overloads of the String.Concat method
@@ -286,7 +287,7 @@ let ``Expression typing test`` () =
     // gives the results for the string type. 
     // 
     for col in 42..43 do 
-        let decls =  typeCheckResults.GetDeclarationListInfo(Some parseResult, 2, inputLines.[1], PartialLongName.Empty(col), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+        let decls =  typeCheckResults.GetDeclarationListInfo(Some parseResult, 2, inputLines.[1], PartialLongName.Empty(mkPos 2 col), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
         let autoCompleteSet = set [ for item in decls.Items -> item.Name ]
         autoCompleteSet |> shouldEqual (set stringMethods)
 
@@ -307,7 +308,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(20), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(mkPos 4 20), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
     let item = decls.Items |> Array.tryFind (fun d -> d.Name = "abc")
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
 
@@ -324,7 +325,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(21), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(mkPos 4 21), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
     let item = decls.Items |> Array.tryFind (fun d -> d.Name = "abc")
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
  
@@ -341,7 +342,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(14), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(mkPos 4 14), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
 
 [<Test; Ignore("Currently failing, see #139")>]
@@ -357,7 +358,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(20), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(mkPos 4 20), fun _ -> false)|> Async.RunSynchronously
     //decls |> List.map (fun d -> d.Head.Symbol.DisplayName) |> printfn "---> decls = %A"
     decls |> Seq.exists (fun d -> d.Head.Symbol.DisplayName = "abc") |> shouldEqual true
 
@@ -374,7 +375,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(21), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(mkPos 4 21), fun _ -> false)|> Async.RunSynchronously
     //decls |> List.map (fun d -> d.Head.Symbol.DisplayName) |> printfn "---> decls = %A"
     decls |> Seq.exists (fun d -> d.Head.Symbol.DisplayName = "abc") |> shouldEqual true
 
@@ -391,7 +392,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(14), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(mkPos 4 14), fun _ -> false)|> Async.RunSynchronously
     //decls |> List.map (fun d -> d.Head.Symbol.DisplayName) |> printfn "---> decls = %A"
     decls |> Seq.exists (fun d -> d.Head.Symbol.DisplayName = "abc") |> shouldEqual true
 
