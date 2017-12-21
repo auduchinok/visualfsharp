@@ -14,13 +14,13 @@ type PartialLongName =
       PartialIdent: string option
       
       /// The column number at the end of full partial name.
-      EndCoords: pos
+      EndPos: pos
 
       /// Position of the last dot.
       LastDotPos: int option }
     
     /// Empty patial long name.
-    static member Empty(endCoords: pos) = { QualifyingIdents = []; PartialIdent = None; EndCoords = endCoords; LastDotPos = None }
+    static member Empty(endPos: pos) = { QualifyingIdents = []; PartialIdent = None; EndPos = endPos; LastDotPos = None }
 
 /// Methods for cheaply and innacurately parsing F#.
 ///
@@ -264,7 +264,7 @@ module QuickParse =
                     else
                         { QualifyingIdents = current
                           PartialIdent = Some (lineStr.Substring(left,pos - left))
-                          EndCoords = coords
+                          EndPos = coords
                           LastDotPos = lastDotPos }
                 else
                     if IsIdentifierPartCharacter pos then InUnquotedIdentifier(left,pos+1,current,throwAwayNext,lastDotPos)
@@ -283,7 +283,7 @@ module QuickParse =
                     else 
                         { QualifyingIdents = current
                           PartialIdent = Some (lineStr.Substring(left,pos - left))
-                          EndCoords = coords
+                          EndPos = coords
                           LastDotPos = lastDotPos }
                 else
                     let remainingLength = lineStr.Length - pos
@@ -299,7 +299,7 @@ module QuickParse =
                     else 
                         { QualifyingIdents = current
                           PartialIdent = None
-                          EndCoords = coords
+                          EndPos = coords
                           LastDotPos = lastDotPos }
                 else
                     if IsWhitespace pos then AtStartOfIdentifier(pos+1,current,throwAwayNext, lastDotPos)

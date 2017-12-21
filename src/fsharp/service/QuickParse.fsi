@@ -15,7 +15,7 @@ type PartialLongName =
       PartialIdent: string option
 
       /// The column number at the end of full partial name.
-      EndCoords: pos
+      EndPos: pos
 
       /// Position of the last dot.
       LastDotPos: int option }

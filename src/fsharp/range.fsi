@@ -27,6 +27,7 @@ type pos =
   
 /// Create a position for the given line and column
 val mkPos : line:int -> column:int -> pos
+val shiftCol: pos -> int -> pos
 
 val posOrder : IComparer<pos>
 

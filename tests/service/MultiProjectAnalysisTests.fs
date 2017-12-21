@@ -18,6 +18,7 @@ open System.IO
 
 open System
 open System.Collections.Generic
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Compiler.Service.Tests.Common
 
@@ -462,7 +463,7 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
 
     //---------------- Get a symbol from project 1 and look up its uses in both projects --------------------
 
-    let xSymbolUse = backgroundTypedParse1.GetSymbolUseAtLocation(3, 4, "", ["x"]) |> Async.RunSynchronously
+    let xSymbolUse = backgroundTypedParse1.GetSymbolUseAtLocation(mkPos 3 4, "") |> Async.RunSynchronously
     xSymbolUse.IsSome |> shouldEqual true  
     let xSymbol = xSymbolUse.Value.Symbol
 
@@ -518,7 +519,7 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
         checker.GetBackgroundCheckResultsForFileInProject(MultiProjectDirty1.fileName1, proj1options) 
         |> Async.RunSynchronously    
 
-    let xSymbolUseAfterChange1 = backgroundTypedParse1AfterChange1.GetSymbolUseAtLocation(4, 4, "", ["x"]) |> Async.RunSynchronously
+    let xSymbolUseAfterChange1 = backgroundTypedParse1AfterChange1.GetSymbolUseAtLocation(mkPos 4 4, "") |> Async.RunSynchronously
     xSymbolUseAfterChange1.IsSome |> shouldEqual true  
     let xSymbolAfterChange1 = xSymbolUseAfterChange1.Value.Symbol
 
@@ -577,7 +578,7 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
         checker.GetBackgroundCheckResultsForFileInProject(MultiProjectDirty1.fileName1, proj1options) 
         |> Async.RunSynchronously    
 
-    let xSymbolUseAfterChange2 = backgroundTypedParse1AfterChange2.GetSymbolUseAtLocation(4, 4, "", ["x"]) |> Async.RunSynchronously
+    let xSymbolUseAfterChange2 = backgroundTypedParse1AfterChange2.GetSymbolUseAtLocation(mkPos 4 4, "") |> Async.RunSynchronously
     xSymbolUseAfterChange2.IsSome |> shouldEqual true  
     let xSymbolAfterChange2 = xSymbolUseAfterChange2.Value.Symbol
 
@@ -796,7 +797,7 @@ let ``Test active patterns' XmlDocSig declared in referenced projects`` () =
         checker.GetBackgroundCheckResultsForFileInProject(MultiProject3.fileName1, MultiProject3.options) 
         |> Async.RunSynchronously    
 
-    let divisibleBySymbolUse = backgroundTypedParse1.GetSymbolUseAtLocation(7,7,"",["DivisibleBy"]) |> Async.RunSynchronously
+    let divisibleBySymbolUse = backgroundTypedParse1.GetSymbolUseAtLocation(mkPos 7 7, "") |> Async.RunSynchronously
     divisibleBySymbolUse.IsSome |> shouldEqual true  
     let divisibleBySymbol = divisibleBySymbolUse.Value.Symbol 
     divisibleBySymbol.ToString() |> shouldEqual "symbol DivisibleBy"

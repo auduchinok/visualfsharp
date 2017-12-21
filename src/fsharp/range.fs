@@ -138,6 +138,7 @@ let fileIndexOfFile f = fileIndexTable.FileToIndex(f) % maxFileIndex
 let fileOfFileIndex n = fileIndexTable.IndexToFile(n)
 
 let mkPos l c = pos (l, c)
+let shiftCol (p: pos) n = pos (p.Line, p.Column + n)
 
 [<Struct; CustomEquality; NoComparison>]
 [<System.Diagnostics.DebuggerDisplay("({StartLine},{StartColumn}-{EndLine},{EndColumn}) {FileName} IsSynthetic={IsSynthetic}")>]
