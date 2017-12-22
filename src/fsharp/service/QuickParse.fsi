@@ -3,6 +3,7 @@
 namespace Microsoft.FSharp.Compiler
 
 open System
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 /// Qualified long name.
@@ -14,13 +15,13 @@ type public PartialLongName =
       PartialIdent: string
 
       /// The column number at the end of full partial name.
-      EndColumn: int
+      EndPos: pos
 
       /// Position of the last dot.
       LastDotPos: int option }
     
     /// Empty patial long name.
-    static member Empty: endColumn: int -> PartialLongName
+    static member Empty: line: int * endColumn: int -> PartialLongName
 
 /// Methods for cheaply and innacurately parsing F#.
 ///
@@ -76,7 +77,7 @@ module public QuickParse =
     
     /// Get the partial long name of the identifier to the left of index.
     /// For example, for `System.DateTime.Now` it returns PartialLongName ([|"System"; "DateTime"|], "Now", Some 32), where "32" pos of the last dot.
-    val GetPartialLongNameEx : lineStr: string * index: int -> PartialLongName
+    val GetPartialLongNameEx: line: int * endCol: int * lineText: string -> PartialLongName
     
     /// Tests whether the user is typing something like "member x." or "override (*comment*) x."
     val TestMemberOrOverrideDeclaration : tokens: FSharpTokenInfo[] -> bool
