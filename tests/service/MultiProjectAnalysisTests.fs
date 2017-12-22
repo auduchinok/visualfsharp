@@ -401,6 +401,7 @@ let x = "F#"
 """                   
     
     File.WriteAllText(fileName1, content)
+    let lines = content.Split('\n')
 
     let cleanFileName a = if a = fileName1 then "Project1" else "??"
 
@@ -462,7 +463,7 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
 
     //---------------- Get a symbol from project 1 and look up its uses in both projects --------------------
 
-    let xSymbolUse = backgroundTypedParse1.GetSymbolUseAtLocation(3, 4, "", ["x"]) |> Async.RunSynchronously
+    let xSymbolUse = backgroundTypedParse1.GetSymbolUse(3, 5, MultiProjectDirty1.lines.[2]) |> Async.RunSynchronously
     xSymbolUse.IsSome |> shouldEqual true  
     let xSymbol = xSymbolUse.Value.Symbol
 
@@ -518,7 +519,7 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
         checker.GetBackgroundCheckResultsForFileInProject(MultiProjectDirty1.fileName1, proj1options) 
         |> Async.RunSynchronously    
 
-    let xSymbolUseAfterChange1 = backgroundTypedParse1AfterChange1.GetSymbolUseAtLocation(4, 4, "", ["x"]) |> Async.RunSynchronously
+    let xSymbolUseAfterChange1 = backgroundTypedParse1AfterChange1.GetSymbolUse(4, 5, MultiProjectDirty1.lines.[3]) |> Async.RunSynchronously
     xSymbolUseAfterChange1.IsSome |> shouldEqual true  
     let xSymbolAfterChange1 = xSymbolUseAfterChange1.Value.Symbol
 
@@ -577,7 +578,7 @@ let ``Test multi project symbols should pick up changes in dependent projects`` 
         checker.GetBackgroundCheckResultsForFileInProject(MultiProjectDirty1.fileName1, proj1options) 
         |> Async.RunSynchronously    
 
-    let xSymbolUseAfterChange2 = backgroundTypedParse1AfterChange2.GetSymbolUseAtLocation(4, 4, "", ["x"]) |> Async.RunSynchronously
+    let xSymbolUseAfterChange2 = backgroundTypedParse1AfterChange2.GetSymbolUse(3, 5, MultiProjectDirty1.lines.[2]) |> Async.RunSynchronously
     xSymbolUseAfterChange2.IsSome |> shouldEqual true  
     let xSymbolAfterChange2 = xSymbolUseAfterChange2.Value.Symbol
 
@@ -769,6 +770,7 @@ let fizzBuzz = function
     | _ -> "" 
     """
     File.WriteAllText(fileName1, fileSource1)
+    let lines1 = fileSource1.Split('\n')
 
     let fileNames = [fileName1]
     let args = mkProjectCommandLineArgs (dllName, fileNames)
@@ -796,7 +798,7 @@ let ``Test active patterns' XmlDocSig declared in referenced projects`` () =
         checker.GetBackgroundCheckResultsForFileInProject(MultiProject3.fileName1, MultiProject3.options) 
         |> Async.RunSynchronously    
 
-    let divisibleBySymbolUse = backgroundTypedParse1.GetSymbolUseAtLocation(7,7,"",["DivisibleBy"]) |> Async.RunSynchronously
+    let divisibleBySymbolUse = backgroundTypedParse1.GetSymbolUse(7, 17, MultiProject3.lines1.[6]) |> Async.RunSynchronously
     divisibleBySymbolUse.IsSome |> shouldEqual true  
     let divisibleBySymbol = divisibleBySymbolUse.Value.Symbol 
     divisibleBySymbol.ToString() |> shouldEqual "symbol DivisibleBy"

@@ -32,6 +32,7 @@ open FsUnit
 open System
 open System.IO
 open Microsoft.FSharp.Compiler
+open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Compiler.Service.Tests.Common
 
@@ -82,15 +83,13 @@ let ``Intro test`` () =
         printfn "Good! got an error, hopefully with the right text: %A" msg
         msg.Message.Contains("Missing qualification after '.'") |> shouldEqual true
 
-    // Get tool tip at the specified location
-    let tip = typeCheckResults.GetToolTipText(4, 7, inputLines.[1], ["foo"], identToken) |> Async.RunSynchronously
+    let tip = typeCheckResults.GetTooltip(4, 7, inputLines.[1], identToken) |> Async.RunSynchronously
     // (sprintf "%A" tip).Replace("\n","") |> shouldEqual """FSharpToolTipText [Single ("val foo : unit -> unitFull name: Test.foo",None)]"""
-    // Get declarations (autocomplete) for a location
-    let partialName = { QualifyingIdents = []; PartialIdent = "msg"; EndColumn = 22; LastDotPos = None }
-    let decls =  typeCheckResults.GetDeclarationListInfo(Some parseResult, 7, inputLines.[6], partialName, (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
-    CollectionAssert.AreEquivalent(stringMethods,[ for item in decls.Items -> item.Name ])
+
+    let completionInfo = typeCheckResults.GetCompletionItems(7, 22, inputLines.[6], Some parseResult) |> Async.RunSynchronously
+    CollectionAssert.AreEquivalent(stringMethods, [ for item in completionInfo.Items -> item.Name ])
     // Get overloads of the String.Concat method
-    let methods = typeCheckResults.GetMethods(5, 27, inputLines.[4], Some ["String"; "Concat"]) |> Async.RunSynchronously
+    let methods = typeCheckResults.GetMethodOverloads(5, 27, inputLines.[4]) |> Async.RunSynchronously
 
     methods.MethodName  |> shouldEqual "Concat"
 
@@ -148,7 +147,7 @@ let ``GetMethodsAsSymbols should return all overloads of a method as FSharpSymbo
     let inputLines = input.Split('\n')
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input)
-    let methodsSymbols = typeCheckResults.GetMethodsAsSymbols(5, 27, inputLines.[4], ["String"; "Concat"]) |> Async.RunSynchronously
+    let methodsSymbols = typeCheckResults.GetMethodOverloadsAsSymbols(5, 27, inputLines.[4]) |> Async.RunSynchronously
     match methodsSymbols with
     | Some methods ->
         [ for ms in methods do
@@ -286,7 +285,7 @@ let ``Expression typing test`` () =
     // gives the results for the string type. 
     // 
     for col in 42..43 do 
-        let decls =  typeCheckResults.GetDeclarationListInfo(Some parseResult, 2, inputLines.[1], PartialLongName.Empty(col), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+        let decls =  typeCheckResults.GetCompletionItems(2, col, inputLines.[1], Some parseResult) |> Async.RunSynchronously
         let autoCompleteSet = set [ for item in decls.Items -> item.Name ]
         autoCompleteSet |> shouldEqual (set stringMethods)
 
@@ -307,7 +306,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(20), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetCompletionItems(4, 20, inputLines.[3], Some parseResult) |> Async.RunSynchronously
     let item = decls.Items |> Array.tryFind (fun d -> d.Name = "abc")
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
 
@@ -324,7 +323,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(21), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetCompletionItems(4, 21, inputLines.[3], Some parseResult) |> Async.RunSynchronously
     let item = decls.Items |> Array.tryFind (fun d -> d.Name = "abc")
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
  
@@ -341,7 +340,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(14), (fun _ -> []), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetCompletionItems(4, 14, inputLines.[3], Some parseResult) |> Async.RunSynchronously
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
 
 [<Test; Ignore("Currently failing, see #139")>]
@@ -357,7 +356,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(20), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetCompletionItemsAsSymbols(4, 20, inputLines.[3], Some parseResult) |> Async.RunSynchronously
     //decls |> List.map (fun d -> d.Head.Symbol.DisplayName) |> printfn "---> decls = %A"
     decls |> Seq.exists (fun d -> d.Head.Symbol.DisplayName = "abc") |> shouldEqual true
 
@@ -374,7 +373,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(21), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetCompletionItemsAsSymbols(4, 21, inputLines.[3], Some parseResult) |> Async.RunSynchronously
     //decls |> List.map (fun d -> d.Head.Symbol.DisplayName) |> printfn "---> decls = %A"
     decls |> Seq.exists (fun d -> d.Head.Symbol.DisplayName = "abc") |> shouldEqual true
 
@@ -391,7 +390,7 @@ type Test() =
     let file = "/home/user/Test.fsx"
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
-    let decls = typeCheckResults.GetDeclarationListSymbols(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(14), fun _ -> false)|> Async.RunSynchronously
+    let decls = typeCheckResults.GetCompletionItemsAsSymbols(4, 14, inputLines.[3], Some parseResult) |> Async.RunSynchronously
     //decls |> List.map (fun d -> d.Head.Symbol.DisplayName) |> printfn "---> decls = %A"
     decls |> Seq.exists (fun d -> d.Head.Symbol.DisplayName = "abc") |> shouldEqual true
 
