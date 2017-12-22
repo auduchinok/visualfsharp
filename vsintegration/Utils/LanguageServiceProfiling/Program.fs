@@ -130,7 +130,7 @@ let main argv =
                 let! fileResults = checkFile fileVersion
                 match fileResults with
                 | Some fileResults ->
-                    let! symbolUse = fileResults.GetSymbolUseAtLocation(options.SymbolPos.Line, options.SymbolPos.Column, getLine(options.SymbolPos.Line),[options.SymbolText])
+                    let! symbolUse = fileResults.GetSymbolUse(options.SymbolPos.Line, options.SymbolPos.Column, getLine options.SymbolPos.Line)
                     match symbolUse with
                     | Some symbolUse ->
                         eprintfn "Found symbol %s" symbolUse.Symbol.FullName
@@ -161,15 +161,8 @@ let main argv =
                     for completion in options.CompletionPositions do
                         eprintfn "querying %A %s" completion.QualifyingNames completion.PartialName
                         let! listInfo =
-                            fileResults.GetDeclarationListInfo(
-                                Some parseResult,
-                                completion.Position.Line,
-                                getLine (completion.Position.Line),
-                                { QualifyingIdents = completion.QualifyingNames
-                                  PartialIdent = completion.PartialName
-                                  EndColumn = completion.Position.Column - 1
-                                  LastDotPos = None },
-                                fun() -> [])
+                            fileResults.GetCompletionItems(completion.Position.Line, completion.Position.Column,
+                                                           getLine completion.Position.Line, Some parseResult)
                            
                         for i in listInfo.Items do
                             eprintfn "%s" (getQuickInfoText i.DescriptionText)

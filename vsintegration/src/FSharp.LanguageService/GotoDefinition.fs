@@ -67,13 +67,13 @@ module internal GotoDefinition =
             | None ->
                 Strings.GotoDefinitionFailed_NotIdentifier()
                 |> GotoDefinitionResult_DEPRECATED.MakeError
-            | Some(colIdent, tag, qualId) ->
+            | Some(colIdent, tag, _) ->
                 if typedResults.HasFullTypeCheckInfo then 
                     if Parser.tokenTagToTokenId tag <> Parser.TOKEN_IDENT then 
                         Strings.GotoDefinitionFailed_NotIdentifier()
                         |> GotoDefinitionResult_DEPRECATED.MakeError
                     else
-                      match typedResults.GetDeclarationLocation (line+1, colIdent, lineStr, qualId, false) |> Async.RunSynchronously with
+                      match typedResults.GetDeclarationLocation(line+1, colIdent, lineStr, false) |> Async.RunSynchronously with
                       | FSharpFindDeclResult.DeclFound m -> 
                           let span = TextSpan (iStartLine = m.StartLine-1, iEndLine = m.StartLine-1, iStartIndex = m.StartColumn, iEndIndex = m.StartColumn) 
                           GotoDefinitionResult_DEPRECATED.MakeSuccess(m.FileName, span)

@@ -765,18 +765,28 @@ type TypeCheckInfo
     let toCompletionItems (items: ItemWithInst list, denv: DisplayEnv, m: range ) =
         items |> List.map DefaultCompletionItem, denv, m
 
-    /// Get the auto-complete items at a particular location.
-    let GetDeclItemsForNamesAtPosition(ctok: CompilationThreadToken, parseResultsOpt: FSharpParseFileResults option, origLongIdentOpt: string list option, 
-                                       residueOpt:string option, lastDotPos: int option, line:int, lineStr:string, colAtEndOfNamesAndResidue, filterCtors, resolveOverloads, 
-                                       getAllSymbols: unit -> AssemblySymbol list, hasTextChangedSinceLastTypecheck: (obj * range -> bool)) = 
+    let fixColumn (lineText: string) = function
+        | pastEndOfLine when pastEndOfLine >= lineText.Length -> lineText.Length
+        | atDot when lineText.[atDot] = '.' -> atDot + 1
+        | atStart when atStart = 0 -> 0
+        | otherwise -> otherwise - 1
+
+    let getResolvedItems (ctok, line, column, lineText, filterCtors, resolveOverloads) =
         RequireCompilationThread ctok // the operations in this method need the reactor thread
 
-        let loc = 
-            match colAtEndOfNamesAndResidue with
-            | pastEndOfLine when pastEndOfLine >= lineStr.Length -> lineStr.Length
-            | atDot when lineStr.[atDot] = '.' -> atDot + 1
-            | atStart when atStart = 0 -> 0
-            | otherwise -> otherwise - 1
+        let partialName = QuickParse.GetPartialLongNameEx(line, column, lineText)
+        let names = partialName.QualifyingIdents @ [partialName.PartialIdent]
+
+        GetDeclaredItems (None, lineText, Some names, column, None, None, line, fixColumn lineText column, filterCtors,
+                          resolveOverloads, (fun _ -> false), false, (fun _ -> []))
+
+    /// Get the auto-complete items at a particular location.
+    let getCompletionItems(ctok: CompilationThreadToken, parseResultsOpt: FSharpParseFileResults option, origLongIdentOpt: string list option, 
+                           residueOpt:string option, lastDotPos: int option, line:int, lineStr:string, colAtEndOfNamesAndResidue, filterCtors, resolveOverloads, 
+                           getAllSymbols: unit -> AssemblySymbol list, hasTextChangedSinceLastTypecheck: (obj * range -> bool)) = 
+        RequireCompilationThread ctok // the operations in this method need the reactor thread
+
+        let loc = fixColumn lineStr colAtEndOfNamesAndResidue
 
         // Look for a "special" completion context
         let completionContext = 
@@ -929,12 +939,12 @@ type TypeCheckInfo
         scope.IsRelativeNameResolvable(cursorPos, plid, symbol.Item)
         
     /// Get the auto-complete items at a location
-    member __.GetLookupItems(ctok, line, column, lineStr, parseResultsOpt, getAllSymbols, hasTextChangedSinceLastTypecheck) =
+    member __.GetCompletionItems(ctok, line, column, lineStr, parseResultsOpt, getAllSymbols, hasTextChangedSinceLastTypecheck) =
         let isInterfaceFile = SourceFileImpl.IsInterfaceFile mainInputFileName
         ErrorScope.Protect Range.range0 
             (fun () ->
                 let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-                match GetDeclItemsForNamesAtPosition(ctok, parseResultsOpt, Some partialName.QualifyingIdents, Some partialName.PartialIdent, partialName.LastDotPos, line, lineStr, partialName.EndPos.Column + 1, ResolveTypeNamesToCtors, ResolveOverloads.Yes, getAllSymbols, hasTextChangedSinceLastTypecheck) with
+                match getCompletionItems (ctok, parseResultsOpt, Some partialName.QualifyingIdents, Some partialName.PartialIdent, partialName.LastDotPos, line, lineStr, partialName.EndPos.Column + 1, ResolveTypeNamesToCtors, ResolveOverloads.Yes, getAllSymbols, hasTextChangedSinceLastTypecheck) with
                 | None -> FSharpDeclarationListInfo.Empty  
                 | Some (items, denv, ctx, m) -> 
                     let items = if isInterfaceFile then items |> List.filter (fun x -> IsValidSignatureFileItem x.Item) else items
@@ -950,12 +960,12 @@ type TypeCheckInfo
                 FSharpDeclarationListInfo.Error msg)
 
     /// Get the symbols for auto-complete items at a location
-    member __.GetDeclarationListSymbols(ctok, line, column, lineStr, parseResultsOpt, hasTextChangedSinceLastTypecheck) =
+    member __.GetCompletionItemsAsSymbols(ctok, line, column, lineStr, parseResultsOpt, hasTextChangedSinceLastTypecheck) =
         let isInterfaceFile = SourceFileImpl.IsInterfaceFile mainInputFileName
         ErrorScope.Protect Range.range0 
             (fun () ->
                 let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-                match GetDeclItemsForNamesAtPosition(ctok, parseResultsOpt, Some partialName.QualifyingIdents, Some partialName.PartialIdent, partialName.LastDotPos, line, lineStr, partialName.EndPos.Column + 1, ResolveTypeNamesToCtors, ResolveOverloads.Yes, (fun () -> []), hasTextChangedSinceLastTypecheck) with
+                match getCompletionItems (ctok, parseResultsOpt, Some partialName.QualifyingIdents, Some partialName.PartialIdent, partialName.LastDotPos, line, lineStr, partialName.EndPos.Column + 1, ResolveTypeNamesToCtors, ResolveOverloads.Yes, (fun () -> []), hasTextChangedSinceLastTypecheck) with
                 | None -> List.Empty  
                 | Some (items, denv, _, m) -> 
                     let items = if isInterfaceFile then items |> List.filter (fun x -> IsValidSignatureFileItem x.Item) else items
@@ -1057,11 +1067,9 @@ type TypeCheckInfo
         let Compute() = 
             ErrorScope.Protect Range.range0 
                 (fun () ->
-                    let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-                    let names = partialName.QualifyingIdents @ [partialName.PartialIdent]
-                    match GetDeclItemsForNamesAtPosition(ctok, None,Some names,None,None,line,lineStr,column,ResolveTypeNamesToCtors,ResolveOverloads.Yes,(fun() -> []),fun _ -> false) with
+                    match getResolvedItems (ctok, line, column, lineStr, ResolveTypeNamesToCtors, ResolveOverloads.Yes) with
                     | None -> FSharpToolTipText []
-                    | Some(items, denv, _, m) ->
+                    | Some(items, denv, m) ->
                          FSharpToolTipText(items |> List.map (fun x -> FormatStructuredDescriptionOfItem false infoReader m denv x.ItemWithInst)))
                 (fun err -> 
                     Trace.TraceInformation(sprintf "FCS: recovering from error in GetStructuredToolTipText: '%s'" err)
@@ -1079,11 +1087,9 @@ type TypeCheckInfo
     member __.GetHelpKeyword(ctok, line, column, lineStr) : string option =
        ErrorScope.Protect Range.range0
             (fun () ->
-                let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-                let names = partialName.QualifyingIdents @ [partialName.PartialIdent]
-                match GetDeclItemsForNamesAtPosition(ctok, None, Some names, None, None, line, lineStr, column, ResolveTypeNamesToCtors, ResolveOverloads.No,(fun() -> []), fun _ -> false) with // F1 Keywords do not distinguish between overloads
+                match getResolvedItems (ctok, line, column, lineStr, ResolveTypeNamesToCtors, ResolveOverloads.No) with // F1 Keywords do not distinguish between overloads
                 | None -> None
-                | Some (items: CompletionItem list, _,_, _) ->
+                | Some (items: CompletionItem list, _, _) ->
                     match items with
                     | [] -> None
                     | [item] ->
@@ -1113,11 +1119,9 @@ type TypeCheckInfo
     member __.GetMethods(ctok, line, column, lineStr) =
         ErrorScope.Protect Range.range0 
             (fun () ->
-                let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-                let names = partialName.QualifyingIdents @ [partialName.PartialIdent]
-                match GetDeclItemsForNamesAtPosition(ctok, None,Some names,None,None,line,lineStr,column,ResolveTypeNamesToCtors,ResolveOverloads.No,(fun() -> []),fun _ -> false) with
+                match getResolvedItems (ctok, line, column, lineStr, ResolveTypeNamesToCtors, ResolveOverloads.No) with
                 | None -> FSharpMethodGroup("",[| |])
-                | Some (items, denv, _, m) -> FSharpMethodGroup.Create(infoReader, m, denv, items |> List.map (fun x -> x.ItemWithInst)))
+                | Some (items, denv, m) -> FSharpMethodGroup.Create(infoReader, m, denv, items |> List.map (fun x -> x.ItemWithInst)))
             (fun msg -> 
                 Trace.TraceInformation(sprintf "FCS: recovering from error in GetMethods: '%s'" msg)
                 FSharpMethodGroup(msg,[| |]))
@@ -1125,11 +1129,9 @@ type TypeCheckInfo
     member __.GetMethodsAsSymbols(ctok, line, column, lineStr) =
       ErrorScope.Protect Range.range0 
        (fun () -> 
-        let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-        let names = partialName.QualifyingIdents @ [partialName.PartialIdent]
-        match GetDeclItemsForNamesAtPosition (ctok, None,Some names, None, None,line, lineStr, column, ResolveTypeNamesToCtors, ResolveOverloads.No,(fun() -> []),fun _ -> false) with
-        | None | Some ([],_,_,_) -> None
-        | Some (items, denv, _, m) ->
+        match getResolvedItems (ctok, line, column, lineStr, ResolveTypeNamesToCtors, ResolveOverloads.No) with
+        | None | Some ([], _, _) -> None
+        | Some (items, denv, m) ->
             let allItems = items |> List.collect (fun item -> SymbolHelpers.FlattenItems g m item.Item)
             let symbols = allItems |> List.map (fun item -> FSharpSymbol.Create(g, thisCcu, tcImports, item))
             Some (symbols, denv, m)
@@ -1141,12 +1143,10 @@ type TypeCheckInfo
     member scope.GetDeclarationLocation(ctok, line, column, lineStr, preferFlag) =
       ErrorScope.Protect Range.range0 
        (fun () -> 
-          let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-          let names = partialName.QualifyingIdents @ [partialName.PartialIdent]
-          match GetDeclItemsForNamesAtPosition (ctok, None,Some names, None, None, line, lineStr, column, ResolveTypeNamesToCtors,ResolveOverloads.Yes,(fun() -> []), fun _ -> false) with
+          match getResolvedItems (ctok, line, column, lineStr, ResolveTypeNamesToCtors, ResolveOverloads.Yes) with
           | None
-          | Some ([], _, _, _) -> FSharpFindDeclResult.DeclNotFound (FSharpFindDeclFailureReason.Unknown "")
-          | Some (item :: _, _, _, _) ->
+          | Some ([], _, _) -> FSharpFindDeclResult.DeclNotFound (FSharpFindDeclFailureReason.Unknown "")
+          | Some (item :: _, _, _) ->
               let getTypeVarNames (ilinfo: ILMethInfo) =
                   let classTypeParams = ilinfo.DeclaringTyconRef.ILTyconRawMetadata.GenericParams |> List.map (fun paramDef -> paramDef.Name)
                   let methodTypeParams = ilinfo.FormalMethodTypars |> List.map (fun typ -> typ.Name)
@@ -1248,11 +1248,9 @@ type TypeCheckInfo
     member scope.GetSymbolUse(ctok, line, column, lineStr) =
       ErrorScope.Protect Range.range0 
        (fun () ->
-        let partialName = QuickParse.GetPartialLongNameEx(line, column, lineStr)
-        let names = partialName.QualifyingIdents @ [partialName.PartialIdent]
-        match GetDeclItemsForNamesAtPosition (ctok, None,Some names, None, None, line, lineStr, column, ResolveTypeNamesToCtors, ResolveOverloads.Yes,(fun() -> []), fun _ -> false) with
-        | None | Some ([], _, _, _) -> None
-        | Some (item :: _, denv, _, m) -> 
+        match getResolvedItems (ctok, line, column, lineStr, ResolveTypeNamesToCtors, ResolveOverloads.Yes) with
+        | None | Some ([], _, _) -> None
+        | Some (item :: _, denv, m) -> 
             let symbol = FSharpSymbol.Create(g, thisCcu, tcImports, item.Item)
             Some (symbol, denv, m)
        ) 
@@ -1936,13 +1934,13 @@ type FSharpCheckFileResults(filename: string, errors: FSharpErrorInfo[], scopeOp
         let getAdditionalSymbols = defaultArg getAdditionalSymbols (fun _ -> [])
         let hasTextChangedSinceLastTypecheck = defaultArg hasTextChangedSinceLastTypecheck (fun _ -> false)
         reactorOp userOpName "GetDeclarations" FSharpDeclarationListInfo.Empty (fun ctok scope -> 
-            scope.GetLookupItems(ctok, line, column, lineText, parseResultsOpt, getAdditionalSymbols, hasTextChangedSinceLastTypecheck))
+            scope.GetCompletionItems(ctok, line, column, lineText, parseResultsOpt, getAdditionalSymbols, hasTextChangedSinceLastTypecheck))
 
     member info.GetCompletionItemsAsSymbols(line, column, lineText, parseResultsOpt, ?hasTextChangedSinceLastTypecheck, ?userOpName) = 
         let userOpName = defaultArg userOpName "Unknown"
         let hasTextChangedSinceLastTypecheck = defaultArg hasTextChangedSinceLastTypecheck (fun _ -> false)
         reactorOp userOpName "GetDeclarationListSymbols" List.empty (fun ctok scope ->
-            scope.GetDeclarationListSymbols(ctok, line, column, lineText, parseResultsOpt, hasTextChangedSinceLastTypecheck))
+            scope.GetCompletionItemsAsSymbols(ctok, line, column, lineText, parseResultsOpt, hasTextChangedSinceLastTypecheck))
 
     /// Resolve the names at the given location to give a data tip 
     member info.GetStructuredTooltip(line, column, lineStr, tokenTag, ?userOpName) = 

@@ -52,11 +52,10 @@ type internal FSharpSignatureHelpProvider
         match paramLocations with
         | None -> return None // no locations = no help
         | Some nwpl -> 
-        let names = nwpl.LongId
         let lidEnd = nwpl.LongIdEndLocation
 
         // Get the methods
-        let! methodGroup = checkFileResults.GetMethods(lidEnd.Line, lidEnd.Column, "", Some names)
+        let! methodGroup = checkFileResults.GetMethodOverloads(lidEnd.Line, lidEnd.Column, textLines.[lidEnd.Line - 1].ToString())
 
         let methods = methodGroup.Methods
 

@@ -105,14 +105,14 @@ type internal FSharpCompletionProvider
             let caretLine = textLines.GetLineFromPosition(caretPosition)
             let fcsCaretLineNumber = Line.fromZ caretLinePos.Line  // Roslyn line numbers are zero-based, FSharp.Compiler.Service line numbers are 1-based
             let caretLineColumn = caretLinePos.Character
-            let partialName = QuickParse.GetPartialLongNameEx(caretLine.ToString(), caretLineColumn - 1) 
+            let partialName = QuickParse.GetPartialLongNameEx(fcsCaretLineNumber, caretLineColumn - 1, caretLine.ToString()) 
             
             let getAllSymbols() = 
                 getAllSymbols checkFileResults
                 |> List.filter (fun entity -> entity.FullName.Contains "." && not (PrettyNaming.IsOperatorName entity.Symbol.DisplayName))
 
-            let! declarations = checkFileResults.GetDeclarationListInfo(Some(parseResults), fcsCaretLineNumber, caretLine.ToString(), 
-                                                                        partialName, getAllSymbols, userOpName=userOpName) |> liftAsync
+            let! declarations = checkFileResults.GetCompletionItems(fcsCaretLineNumber, caretLineColumn - 1, caretLine.ToString(),
+                                                                    Some(parseResults), getAllSymbols, userOpName=userOpName) |> liftAsync
             let results = List<Completion.CompletionItem>()
             
             let getKindPriority = function

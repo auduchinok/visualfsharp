@@ -45,7 +45,7 @@ type internal FSharpColorizationService
                 let! _, _, checkResults = checkerProvider.Checker.ParseAndCheckDocument(document, projectOptions, sourceText = sourceText, allowStaleResults = false, userOpName=userOpName) 
                 // it's crucial to not return duplicated or overlapping `ClassifiedSpan`s because Find Usages service crashes.
                 let targetRange = RoslynHelpers.TextSpanToFSharpRange(document.FilePath, textSpan, sourceText)
-                let colorizationData = checkResults.GetSemanticClassification (Some targetRange) |> Array.distinctBy fst
+                let colorizationData = checkResults.GetSemanticClassifications(Some targetRange) |> Array.distinctBy fst
                 
                 for (range, classificationType) in colorizationData do
                     match RoslynHelpers.TryFSharpRangeToTextSpan(sourceText, range) with

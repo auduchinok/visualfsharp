@@ -58,8 +58,8 @@ type internal FSharpFindUsagesService
             let defines = CompilerEnvironment.GetCompilationDefinesForEditing(document.FilePath, parsingOptions)
             
             let! symbol = Tokenizer.getSymbolAtPosition(document.Id, sourceText, position, document.FilePath, defines, SymbolLookupKind.Greedy, false)
-            let! symbolUse = checkFileResults.GetSymbolUseAtLocation(lineNumber, symbol.Ident.idRange.EndColumn, textLine, symbol.FullIsland, userOpName=userOpName)
-            let! declaration = checkFileResults.GetDeclarationLocation (lineNumber, symbol.Ident.idRange.EndColumn, textLine, symbol.FullIsland, false, userOpName=userOpName) |> liftAsync
+            let! symbolUse = checkFileResults.GetSymbolUse(lineNumber, symbol.Ident.idRange.EndColumn, textLine, userOpName=userOpName)
+            let! declaration = checkFileResults.GetDeclarationLocation(lineNumber, symbol.Ident.idRange.EndColumn, textLine, false, userOpName=userOpName) |> liftAsync
             let tags = GlyphTags.GetTags(Tokenizer.GetGlyphForSymbol (symbolUse.Symbol, symbol.Kind))
             
             let declarationRange = 

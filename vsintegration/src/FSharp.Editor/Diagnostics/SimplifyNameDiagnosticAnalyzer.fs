@@ -70,7 +70,7 @@ type internal SimplifyNameDiagnosticAnalyzer() =
                         |> Array.Parallel.map (fun symbolUse ->
                             let lineStr = sourceText.Lines.[Line.toZ symbolUse.RangeAlternate.StartLine].ToString()
                             // for `System.DateTime.Now` it returns ([|"System"; "DateTime"|], "Now")
-                            let partialName = QuickParse.GetPartialLongNameEx(lineStr, symbolUse.RangeAlternate.EndColumn - 1)
+                            let partialName = QuickParse.GetPartialLongNameEx(symbolUse.RangeAlternate.EndLine, symbolUse.RangeAlternate.EndColumn - 1, lineStr)
                             // `symbolUse.RangeAlternate.Start` does not point to the start of plid, it points to start of `name`,
                             // so we have to calculate plid's start ourselves.
                             let plidStartCol = symbolUse.RangeAlternate.EndColumn - partialName.PartialIdent.Length - (getPlidLength partialName.QualifyingIdents)

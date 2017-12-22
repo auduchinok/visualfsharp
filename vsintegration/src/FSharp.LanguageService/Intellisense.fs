@@ -324,12 +324,12 @@ type internal FSharpIntellisenseInfo_DEPRECATED
                     | Some nwpl -> 
                         // Note: this may alternatively workaround some parts of 90778 - the real fix for that is to have before-overload-resolution name-sink work correctly.
                         // However it also deals with stale typecheck info that may not have recorded name resolutions for a recently-typed long-id.
-                        let names = nwpl.LongId
                         // "names" is a long-id that we can fallback-lookup in the local environment if captured name resolutions finds nothing at the location.
                         // This can happen e.g. if you are typing quickly and the typecheck results are stale enough that you don't have a captured resolution for
                         // the name you just typed, but fresh enough that you do have the right name-resolution-environment to look up the name.
                         let lidEnd = nwpl.LongIdEndLocation
-                        let methods = typedResults.GetMethods(lidEnd.Line, lidEnd.Column, "", Some names)  |> Async.RunSynchronously
+                        let lineText = VsTextLines.LineText (VsTextView.Buffer view) lidEnd.Line
+                        let methods = typedResults.GetMethodOverloads(lidEnd.Line, lidEnd.Column, lineText)  |> Async.RunSynchronously
                         
                         // If the name is an operator ending with ">" then it is a mistake 
                         // we can't tell whether "  >(" is a generic method call or an operator use 
@@ -453,7 +453,7 @@ type internal FSharpIntellisenseInfo_DEPRECATED
                                                 
                             // Correct the identifier (e.g. to correctly handle active pattern names that end with "BAR" token)
                             let tokenTag = QuickParse.CorrectIdentifierToken s tokenTag
-                            let dataTip = typedResults.GetStructuredToolTipText(Range.Line.fromZ line, colAtEndOfNames, lineText, qualId, tokenTag) |> Async.RunSynchronously
+                            let dataTip = typedResults.GetStructuredTooltip(Range.Line.fromZ line, colAtEndOfNames, lineText, tokenTag) |> Async.RunSynchronously
 
                             match dataTip with
                             | FSharpStructuredToolTipText.FSharpToolTipText [] when makeSecondAttempt -> getDataTip true
@@ -527,15 +527,13 @@ type internal FSharpIntellisenseInfo_DEPRECATED
                                     Some untypedResults
                                 else
                                     None
-                            // TODO don't use QuickParse below, we have parse info available
-                            let pname = QuickParse.GetPartialLongNameEx(lineText, col-1) 
                             let _x = 1 // for breakpoint
 
                             let detectTextChange (oldTextSnapshotInfo: obj, range) = 
                                 let oldTextSnapshot = oldTextSnapshotInfo :?> ITextSnapshot
                                 hasTextChangedSinceLastTypecheck (textSnapshot, oldTextSnapshot, Range.Range.toZ range)
 
-                            let! decls = typedResults.GetDeclarationListInfo(untypedParseInfoOpt, Range.Line.fromZ line, lineText, pname, (fun() -> []), detectTextChange) 
+                            let! decls = typedResults.GetCompletionItems(Range.Line.fromZ line, col, lineText, untypedParseInfoOpt, hasTextChangedSinceLastTypecheck = detectTextChange) 
                             return (new FSharpDeclarations_DEPRECATED(documentationBuilder, decls.Items, reason) :> Declarations_DEPRECATED) 
                     else
                         // no TypeCheckInfo in ParseResult.
@@ -592,10 +590,9 @@ type internal FSharpIntellisenseInfo_DEPRECATED
                                     let possibleIdentifier = QuickParse.GetCompleteIdentifierIsland false lineText col
                                     match possibleIdentifier with
                                     |   None -> None // no help keyword
-                                    |   Some(s,colAtEndOfNames, _) ->
+                                    |   Some(_, colAtEndOfNames, _) ->
                                             if typedResults.HasFullTypeCheckInfo then 
-                                                let qualId = PrettyNaming.GetLongNameFromString s
-                                                match typedResults.GetF1Keyword(Range.Line.fromZ line,colAtEndOfNames, lineText, qualId) |> Async.RunSynchronously with
+                                                match typedResults.GetHelpKeyword(Range.Line.fromZ line, colAtEndOfNames, lineText) |> Async.RunSynchronously with
                                                 | Some s -> Some s
                                                 | None -> None 
                                             else None                           
@@ -623,6 +620,6 @@ type internal FSharpIntellisenseInfo_DEPRECATED
 
         // This is called on the UI thread after fresh full typecheck results are available
         member this.OnParseFileOrCheckFileComplete(source: IFSharpSource_DEPRECATED) =
-            for line in colorizer.Value.SetExtraColorizations(typedResults.GetSemanticClassification None) do
+            for line in colorizer.Value.SetExtraColorizations(typedResults.GetSemanticClassifications None) do
                 source.RecolorizeLine line
 
