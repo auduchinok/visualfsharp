@@ -749,6 +749,8 @@ and [<Class>] internal FSharpMemberOrFunctionOrValue =
     /// Indicates if this is an extension member?
     member IsExtensionMember : bool
 
+    member IsCSharpExtensionMember: bool
+
     [<System.Obsolete("Renamed to IsOverrideOrExplicitInterfaceImplementation")>]
     member IsOverrideOrExplicitMember : bool
 

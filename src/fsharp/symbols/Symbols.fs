@@ -1550,6 +1550,13 @@ and FSharpMemberOrFunctionOrValue(cenv, d:FSharpMemberOrValData, item) =
         | V v -> v.IsExtensionMember
         | C _ -> false
 
+    member __.IsCSharpExtensionMember =
+        if isUnresolved() then false else
+        match d with
+        | M m -> m.IsCSharpStyleExtensionMember
+        | _ -> false
+
+
     member this.IsOverrideOrExplicitMember = this.IsOverrideOrExplicitInterfaceImplementation
     member __.IsOverrideOrExplicitInterfaceImplementation =
         if isUnresolved() then false else 

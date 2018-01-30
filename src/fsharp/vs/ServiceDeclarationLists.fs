@@ -564,7 +564,10 @@ type FSharpDeclarationListInfo<'T>(declarations: FSharpDeclarationListItem<'T>[]
     static member Create(infoReader:InfoReader, m, denv, getAccessibility, unresolvedOnly: bool, items: CompletionItem list, reactor, currentNamespaceOrModule: string[] option, isAttributeApplicationContext: bool, checkAlive) = 
         let g = infoReader.g
         let isForType = items |> List.exists (fun x -> x.Type.IsSome)
-        let items = items |> SymbolHelpers.RemoveExplicitlySuppressedCompletionItems g
+        let items =
+            if unresolvedOnly
+            then items |> List.filter (fun x -> x.Unresolved.IsSome)
+            else items |> SymbolHelpers.RemoveExplicitlySuppressedCompletionItems g
         
         let tyconRefOptEq tref1 tref2 =
             match tref1 with
@@ -600,13 +603,14 @@ type FSharpDeclarationListInfo<'T>(declarations: FSharpDeclarationListItem<'T>[]
         if verbose then dprintf "service.ml: mkDecls: %d found groups after filtering\n" (List.length items); 
 
         // Group by full name for unresolved items and by display name for resolved ones.
-        let items = 
-            items
-            |> List.rev
-            // Prefer items from file check results to ones from referenced assemblies via GetAssemblyContent ("all entities")
-            |> List.sortBy (fun x -> x.Unresolved.IsSome) 
-            // Remove all duplicates. We've put the types first, so this removes the DelegateCtor and DefaultStructCtor's.
-            |> SymbolHelpers.RemoveDuplicateCompletionItems g
+        let items =
+            (if unresolvedOnly then items else  
+                items
+                |> List.rev
+                // Prefer items from file check results to ones from referenced assemblies via GetAssemblyContent ("all entities")
+                |> List.sortBy (fun x -> x.Unresolved.IsSome) 
+                // Remove all duplicates. We've put the types first, so this removes the DelegateCtor and DefaultStructCtor's.
+                |> SymbolHelpers.RemoveDuplicateCompletionItems g)
             |> List.groupBy (fun x ->
                 match x.Unresolved with
                 | Some u -> 
