@@ -895,6 +895,8 @@ type FSharpMemberOrFunctionOrValue =
     /// Get the accessibility information for the member, function or value
     member Accessibility: FSharpAccessibility
 
+    member IsRefCell : bool
+
     /// Indicated if this is a value compiled to a method
     member IsValCompiledAsMethod: bool
     
