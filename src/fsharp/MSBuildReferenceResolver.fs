@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
-module internal Microsoft.FSharp.Compiler.MSBuildReferenceResolver 
+module Microsoft.FSharp.Compiler.MSBuildReferenceResolver 
 
     open System
     open System.IO
