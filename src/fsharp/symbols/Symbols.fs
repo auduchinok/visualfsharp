@@ -398,6 +398,18 @@ and FSharpEntity(cenv: SymbolEnv, entity:EntityRef) =
         | CompiledTypeRepr.ILAsmNamed(tref, _, _) -> tref.QualifiedName
         | CompiledTypeRepr.ILAsmOpen _ -> fail()
         
+    member x.QualifiedBaseName = 
+         checkIsResolved()
+         let fail() = invalidOp (sprintf "the type '%s' does not have a qualified name" x.LogicalName)
+ #if !NO_EXTENSIONTYPING
+         if entity.IsTypeAbbrev || entity.IsProvidedErasedTycon || entity.IsNamespace then fail()
+ #else
+         if entity.IsTypeAbbrev || entity.IsNamespace then fail()
+ #endif
+         match entity.CompiledRepresentation with 
+         | CompiledTypeRepr.ILAsmNamed(tref, _, _) -> tref.BasicQualifiedName
+         | CompiledTypeRepr.ILAsmOpen _ -> fail()
+        
     member x.FullName = 
         checkIsResolved()
         match x.TryFullName with 
@@ -2115,6 +2127,17 @@ and FSharpType(cenv, ty:TType) =
     member x.BaseType = 
         GetSuperTypeOfType cenv.g cenv.amap range0 ty
         |> Option.map (fun ty -> FSharpType(cenv, ty)) 
+
+    member x.StrippedType = FSharpType(cenv, stripTyEqnsWrtErasure EraseAll cenv.g typ) 
+    
+    member x.QualifiedBaseName =
+        protect <| fun () -> 
+            match stripTyparEqns typ with 
+            | TType_app (tcref, _) ->
+                match tcref.CompiledRepresentation with 
+                | CompiledTypeRepr.ILAsmNamed(tref, _, _) -> tref.BasicQualifiedName
+                | CompiledTypeRepr.ILAsmOpen _ -> fail() 
+            | _ -> invalidOp "not a stripped type"
 
     member x.Instantiate(instantiation:(FSharpGenericParameter * FSharpType) list) = 
         let typI = instType (instantiation |> List.map (fun (tyv, ty) -> tyv.V, ty.V)) ty
