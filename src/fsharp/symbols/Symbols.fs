@@ -2090,6 +2090,10 @@ and FSharpType(cenv, ty:TType) =
              yield FSharpType(cenv, ty) ]
         |> makeReadOnlyCollection
 
+    member x.IsUnit = typeEquiv cenv.g typ cenv.g.unit_ty 
+
+    member x.IsNativePtr = typeEquiv cenv.g typ cenv.g.nativeint_ty
+
     member x.BaseType = 
         GetSuperTypeOfType cenv.g cenv.amap range0 ty
         |> Option.map (fun ty -> FSharpType(cenv, ty)) 
