@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 namespace FSharp.Compiler.SourceCodeServices
 
@@ -2154,6 +2154,10 @@ and FSharpType(cenv, ty:TType) =
         [ for ty in AllInterfacesOfType  cenv.g cenv.amap range0 AllowMultiIntfInstantiations.Yes ty do 
              yield FSharpType(cenv, ty) ]
         |> makeReadOnlyCollection
+
+    member x.IsUnit = typeEquiv cenv.g ty cenv.g.unit_ty 
+
+    member x.IsNativePtr = typeEquiv cenv.g ty cenv.g.nativeint_ty
 
     member x.BaseType = 
         GetSuperTypeOfType cenv.g cenv.amap range0 ty
