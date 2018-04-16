@@ -1165,7 +1165,7 @@ module StaticLinker =
                   reduceMemoryUsage = tcConfig.reduceMemoryUsage
                   metadataOnly = MetadataOnlyFlag.No
                   tryGetMetadataSnapshot = (fun _ -> None)
-                  pdbPath = None  } 
+                  pdbDirPath = None  } 
             ILBinaryReader.OpenILModuleReader mscorlib40 opts
               
         let tdefs1 = ilxMainModule.TypeDefs.AsList  |> List.filter (fun td -> not (MainModuleBuilder.injectedCompatTypes.Contains(td.Name)))
@@ -1251,7 +1251,7 @@ module StaticLinker =
 
                                 let fileName = dllInfo.FileName
                                 let modul = 
-                                    let pdbPathOption = 
+                                    let pdbDirPathOption = 
                                         // We open the pdb file if one exists parallel to the binary we 
                                         // are reading, so that --standalone will preserve debug information. 
                                         if tcConfig.openDebugInformationForLaterStaticLinking then 
@@ -1269,7 +1269,7 @@ module StaticLinker =
                                         { ilGlobals = ilGlobals
                                           metadataOnly = MetadataOnlyFlag.No // turn this off here as we need the actual IL code
                                           reduceMemoryUsage = tcConfig.reduceMemoryUsage
-                                          pdbPath = pdbPathOption
+                                          pdbDirPath = pdbDirPathOption
                                           tryGetMetadataSnapshot = (fun _ -> None) } 
 
                                     let reader = ILBinaryReader.OpenILModuleReader dllInfo.FileName opts
