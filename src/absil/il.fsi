@@ -1466,6 +1466,11 @@ type ILNativeResource =
     /// Represents a native resource to be written in an output file
     | Out of unlinkedResource: byte[]
 
+
+/// One module in the "current" assembly, either a main-module or an auxiliary module.
+/// The main module will have a manifest.
+///
+/// An assembly is built by joining together a "main" module plus several auxiliary modules. 
 type IModuleDef =
     abstract Manifest: ILAssemblyManifest option
     abstract Name: string
@@ -1503,10 +1508,7 @@ type IModuleDef =
         ?nativeResources: ILNativeResource list * ?customAttrsStored: ILAttributesStored * ?metadataIndex: int32
             -> IModuleDef
 
-/// One module in the "current" assembly, either a main-module or an auxiliary module.
-/// The main module will have a manifest.
-///
-/// An assembly is built by joining together a "main" module plus several auxiliary modules. 
+
 [<Sealed>]
 type ILModuleDef =
     new:
