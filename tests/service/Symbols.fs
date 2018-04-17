@@ -86,3 +86,25 @@ open Ns1.Collections
             ns1.IsEffectivelySameAs(ns2) |> should be False
         | _ ->
             sprintf "Exprecting 2 namespaces, got: %A" openedNamespaces |> failwith
+
+
+open Microsoft.FSharp.Compiler.AbstractIL.ILBinaryReader
+
+[<Test>]
+let ``Assembly reader test`` () =
+    let defaultReader = Shim.AssemblyReader
+    let reader =
+        { new IAssemblyReader with
+            member x.GetILModuleReader(path, opts) =
+                let result = defaultReader.GetILModuleReader(path, opts)
+                let y = result
+                y }
+    Shim.AssemblyReader <- reader
+    let source = """
+module M
+let x = 123
+"""
+
+    let fileName, options = mkTestFileAndOptions source [| |]
+    let _, checkResults = checker.ParseAndCheckFileInProject(fileName, 0, source, options) |> Async.RunSynchronously
+    ()
