@@ -1838,6 +1838,7 @@ val emptyILCustomAttrs: ILAttributes
 
 val mkILSecurityDecls: ILSecurityDecl list -> ILSecurityDecls
 val emptyILSecurityDecls: ILSecurityDecls
+val emptyILSecurityDeclsStored: ILSecurityDeclsStored
 val storeILSecurityDecls: ILSecurityDecls -> ILSecurityDeclsStored
 val mkILSecurityDeclsReader: (int32 -> ILSecurityDecl[]) -> ILSecurityDeclsStored
 

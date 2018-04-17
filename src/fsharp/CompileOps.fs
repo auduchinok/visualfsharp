@@ -2698,7 +2698,7 @@ type AssemblyResolution =
                           reduceMemoryUsage = reduceMemoryUsage
                           metadataOnly = MetadataOnlyFlag.Yes
                           tryGetMetadataSnapshot = tryGetMetadataSnapshot } 
-                    use reader = OpenILModuleReader this.resolvedPath readerSettings
+                    use reader = AssemblyReader.GetILModuleReader(this.resolvedPath, readerSettings)
                     mkRefToILAssembly reader.ILModuleDef.ManifestOfAssembly
             this.ilAssemblyRef := Some(assRef)
             return assRef
