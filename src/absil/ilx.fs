@@ -63,7 +63,7 @@ type IlxUnionSpec =
 
 type IlxClosureLambdas = 
     | Lambdas_forall of ILGenericParameterDef * IlxClosureLambdas
-    | Lambdas_lambda of ILParameter * IlxClosureLambdas
+    | Lambdas_lambda of IParameter * IlxClosureLambdas
     | Lambdas_return of ILType
 
 type IlxClosureApps = 
