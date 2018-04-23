@@ -2218,10 +2218,13 @@ and ITypeDef =
     abstract WithSpecialName: bool -> ITypeDef
     abstract WithInitSemantics: ILTypeInit -> ITypeDef
 
-    abstract With: ?name: string * ?attributes: TypeAttributes * ?layout: ILTypeDefLayout *  ?implements: ILTypes * 
-                 ?genericParams:ILGenericParameterDefs * ?extends:ILType option * ?methods:IMethodDefs * 
-                 ?nestedTypes:ITypeDefs * ?fields: IFieldDefs * ?methodImpls:ILMethodImplDefs * ?events:IEventDefs * 
-                 ?properties:IPropertyDefs * ?customAttrs:IAttributes * ?securityDecls: ILSecurityDecls -> ITypeDef
+    abstract With:
+        ?name: string * ?attributes: TypeAttributes * ?layout: ILTypeDefLayout *  ?implements: ILTypes * 
+        ?genericParams: ILGenericParameterDefs * ?extends: ILType option * ?methods: IMethodDefs * 
+        ?nestedTypes: ITypeDefs * ?fields: IFieldDefs * ?methodImpls: ILMethodImplDefs * ?events: IEventDefs * 
+        ?properties: IPropertyDefs * ?customAttrs: IAttributes * ?securityDecls: ILSecurityDecls
+            -> ITypeDef
+
 
 and IPreTypeDef = 
         abstract Namespace: string list
