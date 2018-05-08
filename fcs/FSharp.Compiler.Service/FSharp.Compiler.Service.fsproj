@@ -5,7 +5,7 @@
   <Import Project="..\fcs.props" />
   <Import Project="..\netfx.props" />
   <PropertyGroup>
-    <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net45</TargetFrameworks>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <DefineConstants>$(DefineConstants);COMPILER_SERVICE_AS_DLL</DefineConstants>
     <DefineConstants>$(DefineConstants);COMPILER</DefineConstants>
@@ -597,7 +597,7 @@
     <Compile Include="$(FSharpSourcesRoot)\fsharp\service\ExternalSymbol.fs">
       <Link>Service/ExternalSymbol.fs</Link>
     </Compile>
-	<Compile Include="$(FSharpSourcesRoot)\fsharp\service\QuickParse.fsi">
+    <Compile Include="$(FSharpSourcesRoot)\fsharp\service\QuickParse.fsi">
       <Link>Service/QuickParse.fsi</Link>
     </Compile>
     <Compile Include="$(FSharpSourcesRoot)\fsharp\service\QuickParse.fs">
@@ -657,5 +657,5 @@
   </ItemGroup>
   <Import Project="$(FSharpSourcesRoot)\scripts\fssrgen.targets" Condition="'$(TargetFramework)' != ''" />
   <Import Project="$(FSharpSourcesRoot)\..\packages\FsLexYacc.7.0.6\build\FsLexYacc.targets" Condition="'$(TargetFramework)' != '' AND Exists('$(FSharpSourcesRoot)\..\packages\FsLexYacc.7.0.6\build\FsLexYacc.targets')" />
-	<Target Name="GenerateCode" AfterTargets="Restore" BeforeTargets="BeforeBuild" DependsOnTargets="CallFsLex;CallFsYacc;ProcessFsSrGen" Condition="'$(TargetFramework)' != ''"></Target>
+    <Target Name="GenerateCode" AfterTargets="Restore" BeforeTargets="BeforeBuild" DependsOnTargets="CallFsLex;CallFsYacc;ProcessFsSrGen" Condition="'$(TargetFramework)' != ''"></Target>
 </Project>
