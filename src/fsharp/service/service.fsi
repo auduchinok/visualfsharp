@@ -127,7 +127,7 @@ type public FSharpCheckFileResults =
     ///    and assume that we're going to repeat the operation later on.
     /// </param>
     /// <param name="userOpName">An optional string used for tracing compiler operations associated with this request.</param>
-    member GetDeclarationListInfo : ParsedFileResultsOpt:FSharpParseFileResults option * line: int * lineText:string * partialName: PartialLongName * ?getAllSymbols: (unit -> AssemblySymbol list) * ?getAdditionalInfo: (FSharpSymbol * FSharpDisplayContext -> 'T option) * ?shortTypeNames: bool * ?unresolvedOnly: bool * ?hasTextChangedSinceLastTypecheck: (obj * range -> bool) * ?userOpName: string -> Async<FSharpDeclarationListInfo<'T>>
+    member GetDeclarationListInfo : ParsedFileResultsOpt:FSharpParseFileResults option * line: int * lineText:string * partialName: PartialLongName * ?getAllSymbols: (unit -> AssemblySymbol list) * ?unresolvedOnly: bool * ?hasTextChangedSinceLastTypecheck: (obj * range -> bool) * ?userOpName: string -> Async<FSharpDeclarationListInfo>
 
     /// <summary>Get the items for a declaration list in FSharpSymbol format</summary>
     ///
@@ -360,6 +360,14 @@ type public FSharpCheckFileAnswer =
     | Aborted // because cancellation caused an abandonment of the operation
     | Succeeded of FSharpCheckFileResults    
 
+
+type CompilerOptions =
+    { HasOptimizations: bool
+      HasDebugSymbols: bool }
+
+    member IsSuitableForDebug: bool
+
+
 [<Sealed; AutoSerializable(false)>]      
 /// Used to parse and check F# source code.
 type public FSharpChecker =
@@ -525,6 +533,8 @@ type public FSharpChecker =
     /// so that references are re-resolved.</param>
     /// <param name="userOpName">An optional string used for tracing compiler operations associated with this request.</param>
     member GetProjectOptionsFromScript : filename: string * sourceText: ISourceText * ?loadedTimeStamp: DateTime * ?otherFlags: string[] * ?useFsiAuxLib: bool * ?assumeDotNetFramework: bool * ?extraProjectInfo: obj * ?optionsStamp: int64 * ?userOpName: string -> Async<FSharpProjectOptions * FSharpErrorInfo list>
+
+    member ParseCompilerArgs: args: string[] -> CompilerOptions
 
     /// <summary>
     /// <para>Get the FSharpProjectOptions implied by a set of command line arguments.</para>

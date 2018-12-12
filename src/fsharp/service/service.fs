@@ -729,8 +729,9 @@ type TypeCheckInfo
                            | None | Some [] ->
                                let globalItems = 
                                    allSymbols() 
-                                   |> List.filter (fun x -> not x.Symbol.IsExplicitlySuppressed)
-                                   |> List.filter (fun x -> 
+                                   |> List.filter (fun x ->
+                                        not x.Symbol.IsExplicitlySuppressed &&
+
                                         match x.Symbol with
                                         | :? FSharpMemberOrFunctionOrValue as m when m.IsConstructor && filterCtors = ResolveTypeNamesToTypeRefs -> false 
                                         | _ -> true)
@@ -923,27 +924,21 @@ type TypeCheckInfo
         scope.IsRelativeNameResolvable(cursorPos, plid, symbol.Item)
         
     /// Get the auto-complete items at a location
-    member __.GetDeclarations (ctok, parseResultsOpt, line, lineStr, partialName, getAllSymbols, getAdditionalInfo, shortTypeNames,unresolvedOnly, hasTextChangedSinceLastTypecheck) =
+    member __.GetDeclarations (ctok, parseResultsOpt, line, lineStr, partialName, getAllSymbols, unresolvedOnly, hasTextChangedSinceLastTypecheck) =
         let isInterfaceFile = SourceFileImpl.IsInterfaceFile mainInputFileName
         ErrorScope.Protect Range.range0 
             (fun () ->
                 match GetDeclItemsForNamesAtPosition(ctok, parseResultsOpt, Some partialName.QualifyingIdents, Some partialName.PartialIdent, partialName.LastDotPos, line, lineStr, partialName.EndColumn + 1, ResolveTypeNamesToCtors, ResolveOverloads.Yes, getAllSymbols, hasTextChangedSinceLastTypecheck) with
                 | None -> FSharpDeclarationListInfo.Empty  
                 | Some (items, denv, ctx, m) ->
-                    let denv = if shortTypeNames then { denv with shortTypeNames = true } else denv
-                    let displayContext = FSharpDisplayContext(fun _ -> denv)
-                    let getAdditionalInfo item =
-                        try getAdditionalInfo(FSharpSymbol.Create(g, thisCcu, ccuSigForFile, tcImports, item), displayContext)
-                        with _ ->
-                            Trace.TraceInformation(sprintf "FCS: could not get additional info for %A" item)
-                            None
+                    let cenv = SymbolEnv(g, thisCcu, Some ccuSigForFile, tcImports)
                     let items = if isInterfaceFile then items |> List.filter (fun x -> IsValidSignatureFileItem x.Item) else items
                     let currentNamespaceOrModule =
                         parseResultsOpt
                         |> Option.bind (fun x -> x.ParseTree)
                         |> Option.map (fun parsedInput -> UntypedParseImpl.GetFullNameOfSmallestModuleOrNamespaceAtPoint(parsedInput, mkPos line 0))
                     let isAttributeApplication = ctx = Some CompletionContext.AttributeApplication
-                    FSharpDeclarationListInfo.Create(infoReader,m,denv,getAdditionalInfo,unresolvedOnly,items,reactorOps,currentNamespaceOrModule,isAttributeApplication,checkAlive))
+                    FSharpDeclarationListInfo.Create(infoReader,m,denv,cenv,unresolvedOnly,items,reactorOps,currentNamespaceOrModule,isAttributeApplication,checkAlive))
             (fun msg -> 
                 Trace.TraceInformation(sprintf "FCS: recovering from error in GetDeclarations: '%s'" msg)
                 FSharpDeclarationListInfo.Error msg)
@@ -2001,15 +1996,13 @@ type FSharpCheckFileResults(filename: string, errors: FSharpErrorInfo[], scopeOp
     member info.HasFullTypeCheckInfo = details.IsSome
     
     /// Intellisense autocompletions
-    member info.GetDeclarationListInfo(parseResultsOpt, line, lineStr, partialName, ?getAllEntities, ?getAdditionalInfo: (FSharpSymbol * FSharpDisplayContext -> 'T option), ?shortTypeNames, ?unresolvedOnly, ?hasTextChangedSinceLastTypecheck, ?userOpName: string) = 
+    member info.GetDeclarationListInfo(parseResultsOpt, line, lineStr, partialName, ?getAllEntities, ?unresolvedOnly, ?hasTextChangedSinceLastTypecheck, ?userOpName: string) = 
         let userOpName = defaultArg userOpName "Unknown"
-        let getAdditionalInfo = defaultArg getAdditionalInfo (fun _ -> None)
-        let shortTypeNames = defaultArg shortTypeNames false
         let unresolvedOnly = defaultArg unresolvedOnly false
         let getAllEntities = defaultArg getAllEntities (fun() -> [])
         let hasTextChangedSinceLastTypecheck = defaultArg hasTextChangedSinceLastTypecheck (fun _ -> false)
         reactorOp userOpName "GetDeclarations" FSharpDeclarationListInfo.Empty (fun ctok scope -> 
-            scope.GetDeclarations(ctok, parseResultsOpt, line, lineStr, partialName, getAllEntities, getAdditionalInfo, shortTypeNames, unresolvedOnly, hasTextChangedSinceLastTypecheck))
+            scope.GetDeclarations(ctok, parseResultsOpt, line, lineStr, partialName, getAllEntities, unresolvedOnly, hasTextChangedSinceLastTypecheck))
 
     member info.GetDeclarationListSymbols(parseResultsOpt, line, lineStr, partialName, ?getAllEntities, ?hasTextChangedSinceLastTypecheck, ?userOpName: string) = 
         let userOpName = defaultArg userOpName "Unknown"
@@ -2978,6 +2971,13 @@ type BackgroundCompiler(legacyReferenceResolver, projectCacheSize, keepAssemblyC
     static member GlobalForegroundTypeCheckCountStatistic = foregroundTypeCheckCount
 
 
+type CompilerOptions =
+    { HasOptimizations: bool
+      HasDebugSymbols: bool }
+
+    member x.IsSuitableForDebug =
+        x.HasDebugSymbols && not x.HasOptimizations
+
 //----------------------------------------------------------------------------
 // FSharpChecker
 //
@@ -3221,7 +3221,28 @@ type FSharpChecker(legacyReferenceResolver, projectCacheSize, keepAssemblyConten
     member ic.GetProjectOptionsFromScript(filename, sourceText, ?loadedTimeStamp, ?otherFlags, ?useFsiAuxLib, ?assumeDotNetFramework, ?extraProjectInfo: obj, ?optionsStamp: int64, ?userOpName: string) = 
         let userOpName = defaultArg userOpName "Unknown"
         backgroundCompiler.GetProjectOptionsFromScript(filename, sourceText, loadedTimeStamp, otherFlags, useFsiAuxLib, assumeDotNetFramework, extraProjectInfo, optionsStamp, userOpName)
-        
+
+    member x.ParseCompilerArgs(args: string[]): CompilerOptions =
+        use errorScope = new ErrorScope()
+        let tcConfigB = TcConfigBuilder.Initial
+        let fsiCompilerOptions = CompileOptions.GetCoreFsiCompilerOptions tcConfigB
+        CompileOptions.ParseCompilerOptions (ignore, fsiCompilerOptions, Array.toList args)
+
+        let hasOptimizations tcConfigB: bool =
+            let optSettings = tcConfigB.optSettings
+
+            optSettings.jitOptUser.IsSome         && not optSettings.jitOptUser.Value &&
+            optSettings.localOptUser.IsSome       && not optSettings.localOptUser.Value &&
+            optSettings.crossModuleOptUser.IsSome && not optSettings.crossModuleOptUser.Value &&
+
+            optSettings.lambdaInlineThreshold = 0 &&
+
+            not tcConfigB.doDetuple &&
+            not tcConfigB.doTLR &&
+            not tcConfigB.doFinalSimplify
+
+        { HasOptimizations = hasOptimizations tcConfigB
+          HasDebugSymbols = tcConfigB.debuginfo }
     member ic.GetProjectOptionsFromCommandLineArgs(projectFileName, argv, ?loadedTimeStamp, ?extraProjectInfo: obj) = 
         let loadedTimeStamp = defaultArg loadedTimeStamp DateTime.MaxValue // Not 'now', we don't want to force reloading
         { ProjectFileName = projectFileName

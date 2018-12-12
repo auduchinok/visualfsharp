@@ -2425,13 +2425,14 @@ type TcConfigBuilder =
             ri, fileNameOfPath ri, ILResourceAccess.Public 
 
 
-let OpenILBinary(filename, reduceMemoryUsage, ilGlobals, pdbDirPath, shadowCopyReferences, tryGetMetadataSnapshot) =
+let OpenILBinary(filename, reduceMemoryUsage, ilGlobals, pdbDirPath, shadowCopyReferences, tryGetMetadataSnapshot, isInteractive) =
       let opts: ILReaderOptions = 
           { ilGlobals = ilGlobals
             metadataOnly = MetadataOnlyFlag.Yes
             reduceMemoryUsage = reduceMemoryUsage
             pdbDirPath = pdbDirPath
-            tryGetMetadataSnapshot = tryGetMetadataSnapshot } 
+            tryGetMetadataSnapshot = tryGetMetadataSnapshot
+            isInteractive = isInteractive }
                       
       let location =
 #if FX_NO_APP_DOMAINS
@@ -2469,7 +2470,7 @@ type AssemblyResolution =
     /// This is because ``EvaluateRawContents ctok`` is used. However this path is only currently used
     /// in fsi.fs, which does not use project references.
     //
-    member this.GetILAssemblyRef(ctok, reduceMemoryUsage, tryGetMetadataSnapshot) = 
+    member this.GetILAssemblyRef(ctok, reduceMemoryUsage, tryGetMetadataSnapshot, isInteractive) =
       cancellable {
         match !this.ilAssemblyRef with 
         | Some assemblyRef -> return assemblyRef
@@ -2496,7 +2497,8 @@ type AssemblyResolution =
                           ilGlobals = EcmaMscorlibILGlobals
                           reduceMemoryUsage = reduceMemoryUsage
                           metadataOnly = MetadataOnlyFlag.Yes
-                          tryGetMetadataSnapshot = tryGetMetadataSnapshot } 
+                          tryGetMetadataSnapshot = tryGetMetadataSnapshot
+                          isInteractive = isInteractive }
                     use reader = OpenILModuleReader this.resolvedPath readerSettings
                     mkRefToILAssembly reader.ILModuleDef.ManifestOfAssembly
             this.ilAssemblyRef := Some assemblyRef
@@ -2620,7 +2622,7 @@ type TcConfig private (data: TcConfigBuilder, validate: bool) =
             let filename = ComputeMakePathAbsolute data.implicitIncludeDir fslibFilename
             if fslibReference.ProjectReference.IsNone then 
                 try 
-                    use ilReader = OpenILBinary(filename, data.reduceMemoryUsage, ilGlobals, None, data.shadowCopyReferences, data.tryGetMetadataSnapshot)
+                    use ilReader = OpenILBinary(filename, data.reduceMemoryUsage, ilGlobals, None, data.shadowCopyReferences, data.tryGetMetadataSnapshot, data.isInteractive)
                     ()
                 with e -> 
                     error(Error(FSComp.SR.buildErrorOpeningBinaryFile(filename, e.Message), rangeStartup))
@@ -3475,13 +3477,13 @@ type TcAssemblyResolutions(tcConfig: TcConfig, results: AssemblyResolution list,
     /// This doesn't need to be cancellable, it is only used by F# Interactive
     member tcResolution.TryFindByExactILAssemblyRef (ctok, assemblyRef) = 
         results |> List.tryFind (fun ar->
-            let r = ar.GetILAssemblyRef(ctok, tcConfig.reduceMemoryUsage, tcConfig.tryGetMetadataSnapshot) |> Cancellable.runWithoutCancellation 
+            let r = ar.GetILAssemblyRef(ctok, tcConfig.reduceMemoryUsage, tcConfig.tryGetMetadataSnapshot, tcConfig.isInteractive) |> Cancellable.runWithoutCancellation
             r = assemblyRef)
 
     /// This doesn't need to be cancellable, it is only used by F# Interactive
     member tcResolution.TryFindBySimpleAssemblyName (ctok, simpleAssemName) = 
         results |> List.tryFind (fun ar->
-            let r = ar.GetILAssemblyRef(ctok, tcConfig.reduceMemoryUsage, tcConfig.tryGetMetadataSnapshot) |> Cancellable.runWithoutCancellation 
+            let r = ar.GetILAssemblyRef(ctok, tcConfig.reduceMemoryUsage, tcConfig.tryGetMetadataSnapshot, tcConfig.isInteractive) |> Cancellable.runWithoutCancellation
             r.Name = simpleAssemName)
 
     member tcResolutions.TryFindByResolvedPath nm = resolvedPathToResolution.TryFind nm
@@ -3884,7 +3886,8 @@ type TcImports(tcConfigP: TcConfigProvider, initialResolutions: TcAssemblyResolu
                       reduceMemoryUsage = tcConfig.reduceMemoryUsage
                       pdbDirPath = None 
                       metadataOnly = MetadataOnlyFlag.Yes
-                      tryGetMetadataSnapshot = tcConfig.tryGetMetadataSnapshot }
+                      tryGetMetadataSnapshot = tcConfig.tryGetMetadataSnapshot
+                      isInteractive = tcConfig.isInteractive }
                 let reader = OpenILModuleReaderFromBytes fileName bytes opts
                 reader.ILModuleDef, reader.ILAssemblyRefs
 
@@ -3976,7 +3979,7 @@ type TcImports(tcConfigP: TcConfigProvider, initialResolutions: TcAssemblyResolu
             | Some g -> g
 
         let ilILBinaryReader =
-            OpenILBinary (filename, tcConfig.reduceMemoryUsage, ilGlobals, pdbDirPath, tcConfig.shadowCopyReferences, tcConfig.tryGetMetadataSnapshot)
+            OpenILBinary (filename, tcConfig.reduceMemoryUsage, ilGlobals, pdbDirPath, tcConfig.shadowCopyReferences, tcConfig.tryGetMetadataSnapshot, tcConfig.isInteractive)
 
         tcImports.AttachDisposeAction(fun _ -> (ilILBinaryReader :> IDisposable).Dispose())
         ilILBinaryReader.ILModuleDef, ilILBinaryReader.ILAssemblyRefs

@@ -3950,7 +3950,8 @@ type ILReaderOptions =
       ilGlobals: ILGlobals
       reduceMemoryUsage: ReduceMemoryFlag
       metadataOnly: MetadataOnlyFlag
-      tryGetMetadataSnapshot: ILReaderTryGetMetadataSnapshot }
+      tryGetMetadataSnapshot: ILReaderTryGetMetadataSnapshot
+      isInteractive: bool }
 
 
 type ILModuleReader =

@@ -1222,7 +1222,8 @@ module StaticLinker =
                   reduceMemoryUsage = tcConfig.reduceMemoryUsage
                   metadataOnly = MetadataOnlyFlag.No
                   tryGetMetadataSnapshot = (fun _ -> None)
-                  pdbDirPath = None  } 
+                  pdbDirPath = None
+                  isInteractive = false }
             ILBinaryReader.OpenILModuleReader mscorlib40 opts
               
         let tdefs1 = ilxMainModule.TypeDefs.AsList  |> List.filter (fun td -> not (MainModuleBuilder.injectedCompatTypes.Contains(td.Name)))
@@ -1314,7 +1315,7 @@ module StaticLinker =
                                         if tcConfig.openDebugInformationForLaterStaticLinking then 
                                             let pdbDir = (try Filename.directoryName fileName with _ -> ".") 
                                             let pdbFile = (try Filename.chopExtension fileName with _ -> fileName)+".pdb" 
-                                            if FileSystem.SafeExists pdbFile then 
+                                            if FileSystem.SafeExists pdbFile then
                                                 if verbose then dprintf "reading PDB file %s from directory %s during static linking\n" pdbFile pdbDir
                                                 Some pdbDir
                                             else 
@@ -1327,7 +1328,8 @@ module StaticLinker =
                                           metadataOnly = MetadataOnlyFlag.No // turn this off here as we need the actual IL code
                                           reduceMemoryUsage = tcConfig.reduceMemoryUsage
                                           pdbDirPath = pdbDirPathOption
-                                          tryGetMetadataSnapshot = (fun _ -> None) } 
+                                          tryGetMetadataSnapshot = (fun _ -> None)
+                                          isInteractive = false }
 
                                     let reader = ILBinaryReader.OpenILModuleReader dllInfo.FileName opts
                                     reader.ILModuleDef

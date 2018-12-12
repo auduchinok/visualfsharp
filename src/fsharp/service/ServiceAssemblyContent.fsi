@@ -110,7 +110,7 @@ module public AssemblyContentProvider =
 
     /// Returns (possibly cached) assembly content.
     val getAssemblyContent : 
-             withCache: ((IAssemblyContentCache -> AssemblySymbol list) -> AssemblySymbol list)  
+             withCache: ((IAssemblyContentCache -> AssemblySymbol list option) -> AssemblySymbol list option)  
           -> contentType: AssemblyContentType 
           -> fileName: string option 
           -> assemblies: FSharpAssembly list 

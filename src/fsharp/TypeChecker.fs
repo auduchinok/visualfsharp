@@ -1533,7 +1533,6 @@ let MakeAndPublishVal cenv env (altActualParent, inSig, declKind, vrec, vscheme,
         let item = Item.Value(mkLocalValRef vspec)
         CallNameResolutionSink cenv.tcSink (vspec.Range, nenv, item, item, emptyTyparInst, ItemOccurence.Binding, env.DisplayEnv, env.eAccessRights)
     | _ -> ()
-
     vspec
 
 let MakeAndPublishVals cenv env (altActualParent, inSig, declKind, vrec, valSchemes, attrs, doc, konst) =
