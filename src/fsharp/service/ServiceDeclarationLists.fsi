@@ -16,7 +16,7 @@ open Microsoft.FSharp.Compiler.Tastops
 /// Returned by GetDeclarations.
 //
 // Note: this type holds a weak reference to compiler resources. 
-type public FSharpDeclarationListItem<'T> =
+type public FSharpDeclarationListItem =
     /// Get the display name for the declaration.
     member Name : string
 
@@ -38,7 +38,7 @@ type public FSharpDeclarationListItem<'T> =
 
     member Glyph : FSharpGlyph
 
-    member AdditionalInfo : 'T option
+    member FSharpSymbol : FSharpSymbol
 
     member Kind : CompletionItemKind
 
@@ -58,20 +58,22 @@ type public FSharpDeclarationListItem<'T> =
 /// Returned by GetDeclarations.
 //
 // Note: this type holds a weak reference to compiler resources. 
-type public FSharpDeclarationListInfo<'T> =
+type public FSharpDeclarationListInfo =
 
-    member Items : FSharpDeclarationListItem<'T>[]
+    member Items : FSharpDeclarationListItem[]
 
     member IsForType : bool
 
     member IsError : bool
 
+    member DisplayContext: FSharpDisplayContext
+
     // Implementation details used by other code in the compiler    
-    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * getAdditionalInfo:(Item -> 'T option) * unresolvedOnly: bool * items:CompletionItem list * reactor:IReactorOperations * currentNamespace:string[] option * isAttributeApplicationContex:bool * checkAlive:(unit -> bool) -> FSharpDeclarationListInfo<'T>
+    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * cenv: SymbolEnv * unresolvedOnly: bool * items:CompletionItem list * reactor:IReactorOperations * currentNamespace:string[] option * isAttributeApplicationContex:bool * checkAlive:(unit -> bool) -> FSharpDeclarationListInfo
 
-    static member internal Error : message:string -> FSharpDeclarationListInfo<'T>
+    static member internal Error : message:string -> FSharpDeclarationListInfo
 
-    static member Empty : FSharpDeclarationListInfo<'T>
+    static member Empty : FSharpDeclarationListInfo
 
 /// Represents one parameter for one method (or other item) in a group. 
 [<Sealed>]

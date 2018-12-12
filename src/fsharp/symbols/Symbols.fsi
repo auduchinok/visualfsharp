@@ -26,13 +26,15 @@ type public FSharpAccessibility =
     internal new: Accessibility * ?isProtected: bool -> FSharpAccessibility
 
     /// Indicates the symbol has public accessibility
-    member IsPublic : bool
+    member IsPublic: bool
 
     /// Indicates the symbol has private accessibility
-    member IsPrivate : bool
+    member IsPrivate: bool
 
     /// Indicates the symbol has internal accessibility
-    member IsInternal : bool
+    member IsInternal: bool
+
+    member IsProtected: bool
 
     /// The underlying Accessibility
     member internal Contents : Accessibility

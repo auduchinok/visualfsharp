@@ -62,7 +62,10 @@ type ILReaderOptions =
 
      /// A function to call to try to get an object that acts as a snapshot of the metadata section of a .NET binary,
      /// and from which we can read the metadata. Only used when metadataOnly=true.
-     tryGetMetadataSnapshot: ILReaderTryGetMetadataSnapshot }
+     tryGetMetadataSnapshot: ILReaderTryGetMetadataSnapshot
+
+     /// Is assembly being read from F# Interactive or script context.
+     isInteractive: bool }
 
 
 /// Represents a reader of the metadata of a .NET binary.  May also give some values (e.g. IL code) from the PE file

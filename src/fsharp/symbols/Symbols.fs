@@ -34,7 +34,7 @@ type FSharpAccessibility(a:Accessibility, ?isProtected) =
         | _ when List.forall isInternalCompPath p  -> Internal 
         | _ -> Private
 
-    member __.IsPublic = not isProtected && match a with Public -> true | _ -> false
+    member __.IsPublic = not isProtected && match a with TAccess [] -> true | _ -> false
 
     member __.IsPrivate = not isProtected && match a with Private -> true | _ -> false
 
@@ -188,6 +188,9 @@ module Impl =
 
 type FSharpDisplayContext(denv: TcGlobals -> DisplayEnv) = 
     member x.Contents(g) = denv(g)
+    member x.WithShortTypeNames() =
+        FSharpDisplayContext(fun g -> { denv g with shortTypeNames = true })
+
     static member Empty = FSharpDisplayContext(fun g -> DisplayEnv.Empty(g))
 
 
@@ -2124,19 +2127,21 @@ and FSharpType(cenv, ty:TType) =
              yield FSharpType(cenv, ty) ]
         |> makeReadOnlyCollection
 
-    member x.IsUnit = typeEquiv cenv.g typ cenv.g.unit_ty 
+    member x.IsUnit = typeEquiv cenv.g ty cenv.g.unit_ty 
 
-    member x.IsNativePtr = typeEquiv cenv.g typ cenv.g.nativeint_ty
+    member x.IsNativePtr =
+        try typeEquiv cenv.g ty cenv.g.nativeint_ty
+        with _ -> false
 
     member x.BaseType = 
         GetSuperTypeOfType cenv.g cenv.amap range0 ty
         |> Option.map (fun ty -> FSharpType(cenv, ty)) 
 
-    member x.StrippedType = FSharpType(cenv, stripTyEqnsWrtErasure EraseAll cenv.g typ) 
+    member x.StrippedType = FSharpType(cenv, stripTyEqnsWrtErasure EraseAll cenv.g ty) 
     
     member x.QualifiedBaseName =
         protect <| fun () -> 
-            match stripTyparEqns typ with 
+            match stripTyparEqns ty with 
             | TType_app (tcref, _) ->
                 match tcref.CompiledRepresentation with 
                 | CompiledTypeRepr.ILAsmNamed(tref, _, _) -> tref.BasicQualifiedName

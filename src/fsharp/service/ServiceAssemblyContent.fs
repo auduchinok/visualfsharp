@@ -353,25 +353,37 @@ module AssemblyContentProvider =
 #endif
         | [], _ -> []
         | assemblies, Some fileName ->
-            let fileWriteTime = FileInfo(fileName).LastWriteTime 
-            withCache <| fun cache ->
-                match contentType, cache.TryGet fileName with 
-                | _, Some entry
-                | Public, Some entry when entry.FileWriteTime = fileWriteTime -> entry.Symbols
-                | _ ->
-                    let symbols = getAssemblySignaturesContent contentType assemblies
-                    cache.Set fileName { FileWriteTime = fileWriteTime; ContentType = contentType; Symbols = symbols }
-                    symbols
+            let fileWriteTime = FileSystem.GetLastWriteTimeShim(fileName)
+            let contents =
+                withCache (fun cache ->
+                    match contentType, cache.TryGet(fileName) with 
+                    | _, Some entry
+                    | Public, Some entry when entry.FileWriteTime = fileWriteTime -> Some entry.Symbols
+                    | _ -> None)
+
+            match contents with
+            | Some symbols -> symbols
+            | _ ->
+
+            let symbols =
+                getAssemblySignaturesContent contentType assemblies
+                |> List.filter (fun entity ->
+                    match contentType, FSharpSymbol.GetAccessibility(entity.Symbol) with
+                    | Full, _ -> true
+                    | Public, access ->
+                        match access with
+                        | None -> true
+                        | Some x when x.IsPublic -> true
+                        | _ -> false)
+
+            withCache (fun cache ->
+                cache.Set fileName { FileWriteTime = fileWriteTime; ContentType = contentType; Symbols = symbols }
+                Some symbols) |> ignore
+            symbols
+
         | assemblies, None -> 
             getAssemblySignaturesContent contentType assemblies
-        |> List.filter (fun entity -> 
-            match contentType, FSharpSymbol.GetAccessibility(entity.Symbol) with
-            | Full, _ -> true
-            | Public, access ->
-                match access with
-                | None -> true
-                | Some x when x.IsPublic -> true
-                | _ -> false)
+
 
 type EntityCache() =
     let dic = Dictionary<AssemblyPath, AssemblyContentCacheEntry>()
