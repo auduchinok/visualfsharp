@@ -2,6 +2,8 @@
   <Import Project="..\..\netfx.props" />
   <PropertyGroup>
     <TargetFrameworks>$(FcsTargetNetFxFramework);netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net461;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net45</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <NoWarn>$(NoWarn);0067;1591</NoWarn>
   </PropertyGroup>
