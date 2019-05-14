@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
+// Copyright (c) Microsoft Corporation.  All Rights Reserved.  See License.txt in the project root for license information.
 
 namespace FSharp.Compiler.SourceCodeServices
 
@@ -34,7 +34,7 @@ type FSharpAccessibility(a:Accessibility, ?isProtected) =
         | _ when List.forall isInternalCompPath p  -> Internal 
         | _ -> Private
 
-    member __.IsPublic = not isProtected && match a with Public -> true | _ -> false
+    member __.IsPublic = not isProtected && match a with TAccess [] -> true | _ -> false
 
     member __.IsPrivate = not isProtected && match a with Private -> true | _ -> false
 
