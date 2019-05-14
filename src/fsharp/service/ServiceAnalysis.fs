@@ -110,6 +110,8 @@ module UnusedOpens =
                 false
              | :? FSharpUnionCase when su.IsFromDefinition -> 
                 false
+             | :? FSharpField ->
+                true
              | _ ->
                 // For the rest of symbols we pick only those which are the first part of a long ident, because it's they which are
                 // contained in opened namespaces / modules. For example, we pick `IO` from long ident `IO.File.OpenWrite` because
