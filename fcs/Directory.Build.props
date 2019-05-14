@@ -21,10 +21,17 @@
     <DisableCompilerRedirection>true</DisableCompilerRedirection>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="$(ArtifactsBinDir)\FSharp.Compiler.Interactive.Settings\$(Configuration)\net472\FSharp.Compiler.Interactive.Settings.dll"
+             PackagePath="lib\$(FcsTargetNetFxFramework)" />
+    <Content Include="$(ArtifactsBinDir)\fcs\$(Configuration)\$(FcsTargetNetFxFramework)\FSharp.Compiler.Service.pdb"
+             PackagePath="lib\$(FcsTargetNetFxFramework)" />
+  </ItemGroup>
+
   <!-- SDK targets override -->
   <PropertyGroup>
     <FSharpSourcesRoot>$(MSBuildThisFileDirectory)..\src</FSharpSourcesRoot>
-    <VersionPrefix>22.0.3</VersionPrefix>
+    <VersionPrefix>28.0.5</VersionPrefix>
     <OtherFlags>--version:$(VersionPrefix)</OtherFlags>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>    
     <!-- FSharp.Compiler.Tools is currently only used to get a working FSI.EXE to execute some scripts during the build -->
