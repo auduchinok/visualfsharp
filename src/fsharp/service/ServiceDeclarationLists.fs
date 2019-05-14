@@ -480,8 +480,8 @@ module internal DescriptionListsImpl =
 
 /// An intellisense declaration
 [<Sealed>]
-type FSharpDeclarationListItem(name: string, nameInCode: string, fullName: string, glyph: FSharpGlyph, info, accessibility: FSharpAccessibility option,
-                               kind: CompletionItemKind, isOwnMember: bool, priority: int, isResolved: bool, namespaceToOpen: string option) =
+type FSharpDeclarationListItem(name: string, nameInCode: string, fullName: string, glyph: FSharpGlyph, info, item: CompletionItem, symbol: FSharpSymbol,
+                               namespaceToOpen: string option) =
 
     let mutable descriptionTextHolder: FSharpToolTipText<_> option = None
     let mutable task = null
@@ -541,28 +541,31 @@ type FSharpDeclarationListItem(name: string, nameInCode: string, fullName: strin
        (fun err -> FSharpToolTipText [FSharpStructuredToolTipElement.CompositionError err])
     member decl.DescriptionText = decl.StructuredDescriptionText |> Tooltips.ToFSharpToolTipText
     member __.Glyph = glyph 
-    member __.Accessibility = accessibility
-    member __.Kind = kind
-    member __.IsOwnMember = isOwnMember
-    member __.MinorPriority = priority
+    member __.FSharpSymbol = symbol
+    member __.Kind = item.Kind
+    member __.IsOwnMember = item.IsOwnMember
+    member __.MinorPriority = item.MinorPriority
     member __.FullName = fullName
-    member __.IsResolved = isResolved
+    member __.IsResolved = item.Unresolved.IsNone
     member __.NamespaceToOpen = namespaceToOpen
 
 /// A table of declarations for Intellisense completion 
 [<Sealed>]
-type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForType: bool, isError: bool) = 
+type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForType: bool, isError: bool, displayContext: FSharpDisplayContext) = 
     static let fsharpNamespace = [|"Microsoft"; "FSharp"|]
-
     member __.Items = declarations
     member __.IsForType = isForType
     member __.IsError = isError
+    member __.DisplayContext = displayContext
 
     // Make a 'Declarations' object for a set of selected items
-    static member Create(infoReader:InfoReader, m, denv, getAccessibility, items: CompletionItem list, reactor, currentNamespaceOrModule: string[] option, isAttributeApplicationContext: bool, checkAlive) = 
+    static member Create(infoReader:InfoReader, m, denv, cenv: SymbolEnv, unresolvedOnly: bool, items: CompletionItem list, reactor, currentNamespaceOrModule: string[] option, isAttributeApplicationContext: bool, checkAlive) = 
         let g = infoReader.g
         let isForType = items |> List.exists (fun x -> x.Type.IsSome)
-        let items = items |> SymbolHelpers.RemoveExplicitlySuppressedCompletionItems g
+        let items =
+            if unresolvedOnly
+            then items |> List.filter (fun x -> x.Unresolved.IsSome)
+            else items |> SymbolHelpers.RemoveExplicitlySuppressedCompletionItems g
         
         let tyconRefOptEq tref1 tref2 =
             match tref1, tref2 with
@@ -599,12 +602,13 @@ type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForT
 
         // Group by full name for unresolved items and by display name for resolved ones.
         let items = 
-            items
-            |> List.rev
-            // Prefer items from file check results to ones from referenced assemblies via GetAssemblyContent ("all entities")
-            |> List.sortBy (fun x -> x.Unresolved.IsSome) 
-            // Remove all duplicates. We've put the types first, so this removes the DelegateCtor and DefaultStructCtor's.
-            |> SymbolHelpers.RemoveDuplicateCompletionItems g
+            (if unresolvedOnly then items else  
+                items
+                |> List.rev
+                // Prefer items from file check results to ones from referenced assemblies via GetAssemblyContent ("all entities")
+                |> List.sortBy (fun x -> x.Unresolved.IsSome) 
+                // Remove all duplicates. We've put the types first, so this removes the DelegateCtor and DefaultStructCtor's.
+                |> SymbolHelpers.RemoveDuplicateCompletionItems g)
             |> List.groupBy (fun x ->
                 match x.Unresolved with
                 | Some u -> 
@@ -640,7 +644,7 @@ type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForT
                     
         let decls = 
             items 
-            |> List.map (fun (displayName, itemsWithSameFullName) -> 
+            |> List.choose (fun (displayName, itemsWithSameFullName) -> 
                 match itemsWithSameFullName with
                 | [] -> failwith "Unexpected empty bag"
                 | _ ->
@@ -696,18 +700,20 @@ type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForT
                             | [||] -> None
                             | ns -> Some (System.String.Join(".", ns)))
 
-                    FSharpDeclarationListItem(
-                        name, nameInCode, fullName, glyph, Choice1Of2 (items, infoReader, m, denv, reactor, checkAlive), getAccessibility item.Item,
-                        item.Kind, item.IsOwnMember, item.MinorPriority, item.Unresolved.IsNone, namespaceToOpen))
+                    if unresolvedOnly && namespaceToOpen.IsNone then None else
+                        Some (FSharpDeclarationListItem(
+                                name, nameInCode, fullName, glyph, Choice1Of2 (items, infoReader, m, denv, reactor, checkAlive),
+                                item, FSharpSymbol.Create(cenv, item.ItemWithInst.Item), namespaceToOpen)))
+                      
 
-        new FSharpDeclarationListInfo(Array.ofList decls, isForType, false)
+        new FSharpDeclarationListInfo(Array.ofList decls, isForType, false, FSharpDisplayContext(fun _ -> denv))
     
     static member Error msg = 
         new FSharpDeclarationListInfo(
                 [| FSharpDeclarationListItem("<Note>", "<Note>", "<Note>", FSharpGlyph.Error, Choice2Of2 (FSharpToolTipText [FSharpStructuredToolTipElement.CompositionError msg]),
-                                             None, CompletionItemKind.Other, false, 0, false, None) |], false, true)
+                                             Unchecked.defaultof<_>, Unchecked.defaultof<_>, None) |], false, true, Unchecked.defaultof<_>)
     
-    static member Empty = FSharpDeclarationListInfo([| |], false, false)
+    static member Empty = FSharpDeclarationListInfo([| |], false, false, Unchecked.defaultof<_>)
 
 
 
