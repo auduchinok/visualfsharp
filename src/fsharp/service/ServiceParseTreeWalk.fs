@@ -370,7 +370,7 @@ module public AstTraversal =
                     traverseSynExpr synExpr
                 | SynExpr.Lambda (_, _, synSimplePats, synExpr, _range) ->
                     match synSimplePats with
-                    | SynSimplePats.SimplePats(pats,_) ->
+                    | SynSimplePats.SimplePats(pats, _, _) ->
                         match visitor.VisitSimplePats(pats) with
                         | Some x -> Some x
                         | None -> traverseSynExpr synExpr
@@ -608,7 +608,7 @@ module public AstTraversal =
             | SynMemberDefn.Member(synBinding, _range) -> traverseSynBinding path synBinding
             | SynMemberDefn.ImplicitCtor(_synAccessOption, _synAttributes, simplePats, _identOption, _range) ->
                 match simplePats with
-                | SynSimplePats.SimplePats(simplePats, _) -> visitor.VisitSimplePats(simplePats)
+                | SynSimplePats.SimplePats(simplePats, _, _) -> visitor.VisitSimplePats(simplePats)
                 | _ -> None
             | SynMemberDefn.ImplicitInherit(synType, synExpr, _identOption, range) -> 
                 [

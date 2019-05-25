@@ -1062,11 +1062,18 @@ and
     /// function definition or other binding point, after the elimination of pattern matching
     /// from the construct, e.g. after changing a "function pat1 -> rule1 | ..." to a
     /// "fun v -> match v with ..."
+    /// These patterns are also used in ImplicitCtor parameter definitions.
+    /// initialPat holds the initially parsed pattern for tooling.
     SynSimplePats =
 
-    | SimplePats of SynSimplePat list * range: range
+    | SimplePats of SynSimplePat list * initialPat: SynPat * range: range
 
-    | Typed of  SynSimplePats * SynType * range: range
+    | Typed of SynSimplePats * SynType * initialPat: SynPat * range: range
+
+    member x.Pats =
+        match x with
+        | SimplePats(pats, _, _) -> pats
+        | Typed(spats, _, _, _) -> spats.Pats
 
 and SynConstructorArgs =
     | Pats of SynPat list
@@ -1907,7 +1914,7 @@ let rec SimplePatsOfPat synArgNameGenerator p =
     | SynPat.FromParseError (p, _) -> SimplePatsOfPat synArgNameGenerator p
     | SynPat.Typed(p', ty, m) ->
         let p2, laterf = SimplePatsOfPat synArgNameGenerator p'
-        SynSimplePats.Typed(p2, ty, m),
+        SynSimplePats.Typed(p2, ty, p, m),
         laterf
 //    | SynPat.Paren (p, m) -> SimplePatsOfPat synArgNameGenerator p
     | SynPat.Tuple (false, ps, m)
@@ -1919,16 +1926,16 @@ let rec SimplePatsOfPat synArgNameGenerator p =
               (composeFunOpt rhsf rhsf'))
             (List.map (SimplePatOfPat synArgNameGenerator) ps)
             ([], None)
-        SynSimplePats.SimplePats (ps2, m),
+        SynSimplePats.SimplePats (ps2, p, m),
         laterf
     | SynPat.Paren(SynPat.Const (SynConst.Unit, m), _)
     | SynPat.Const (SynConst.Unit, m) ->
-        SynSimplePats.SimplePats ([], m),
+        SynSimplePats.SimplePats ([], p, m),
         None
     | _ ->
         let m = p.Range
         let sp, laterf = SimplePatOfPat synArgNameGenerator p
-        SynSimplePats.SimplePats ([sp], m), laterf
+        SynSimplePats.SimplePats ([sp], p, m), laterf
 
 let PushPatternToExpr synArgNameGenerator isMember pat (rhs: SynExpr) =
     let nowpats, laterf = SimplePatsOfPat synArgNameGenerator pat
@@ -2056,7 +2063,7 @@ let mkSynDotParenGet lhsm dotm a b   =
 
 let mkSynUnit m = SynExpr.Const (SynConst.Unit, m)
 let mkSynUnitPat m = SynPat.Const(SynConst.Unit, m)
-let mkSynDelay m e = SynExpr.Lambda (false, false, SynSimplePats.SimplePats ([mkSynCompGenSimplePatVar (mkSynId m "unitVar")], m), e, m)
+let mkSynDelay m e = SynExpr.Lambda (false, false, SynSimplePats.SimplePats([mkSynCompGenSimplePatVar (mkSynId m "unitVar")], SynPat.Wild m, m), e, m)
 
 let mkSynAssign (l: SynExpr) (r: SynExpr) =
     let m = unionRanges l.Range r.Range
@@ -2199,8 +2206,8 @@ module SynInfo =
     /// Infer the syntactic argument info for one or more arguments one or more simple patterns.
     let rec InferSynArgInfoFromSimplePats x =
         match x with
-        | SynSimplePats.SimplePats(ps, _) -> List.map (InferSynArgInfoFromSimplePat []) ps
-        | SynSimplePats.Typed(ps, _, _) -> InferSynArgInfoFromSimplePats ps
+        | SynSimplePats.SimplePats(ps, _, _) -> List.map (InferSynArgInfoFromSimplePat []) ps
+        | SynSimplePats.Typed(ps, _, _, _) -> InferSynArgInfoFromSimplePats ps
 
     /// Infer the syntactic argument info for one or more arguments a pattern.
     let InferSynArgInfoFromPat p =

@@ -2648,7 +2648,7 @@ module EventDeclarationNormalization =
 
                    match rhsExpr with 
                    // Detect 'fun () -> e' which results from the compilation of a property getter
-                   | SynExpr.Lambda (_, _, SynSimplePats.SimplePats([], _), trueRhsExpr, m) ->
+                   | SynExpr.Lambda (_, _, SynSimplePats.SimplePats([], _, _), trueRhsExpr, m) ->
                        let rhsExpr = mkSynApp1 (SynExpr.DotGet (SynExpr.Paren (trueRhsExpr, range0, None, m), range0, LongIdentWithDots([ident(target, m)], []), m)) (SynExpr.Ident (ident(argName, m))) m
                        
                        // reconstitute rhsExpr
@@ -5123,8 +5123,8 @@ and ValidateOptArgOrder (spats: SynSimplePats) =
 
     let rec getPats spats =
         match spats with
-        | SynSimplePats.SimplePats(p, m) -> p, m
-        | SynSimplePats.Typed(p, _, _) -> getPats p
+        | SynSimplePats.SimplePats(p, _, m) -> p, m
+        | SynSimplePats.Typed(p, _, _, _) -> getPats p
         
     let rec isOptArg pat =
         match pat with
@@ -5146,7 +5146,7 @@ and TcSimplePats cenv optArgsOK checkCxs ty env (tpenv, names, takenNames: Set<_
     ValidateOptArgOrder p
                
     match p with 
-    | SynSimplePats.SimplePats ([], m) -> 
+    | SynSimplePats.SimplePats ([], _, m) -> 
         // Unit "()" patterns in argument position become SynSimplePats.SimplePats([], _) in the
         // syntactic translation when building bindings. This is done because the
         // use of "()" has special significance for arity analysis and argument counting.
@@ -5160,21 +5160,21 @@ and TcSimplePats cenv optArgsOK checkCxs ty env (tpenv, names, takenNames: Set<_
         let _, names, takenNames = TcPatBindingName cenv env id ty false None None (ValInline.Optional, permitInferTypars, noArgOrRetAttribs, false, None, true) (names, takenNames)
         [id.idText], (tpenv, names, takenNames)
 
-    | SynSimplePats.SimplePats ([p], _) -> 
+    | SynSimplePats.SimplePats ([p], _, _) -> 
         let v, (tpenv, names, takenNames) = TcSimplePat optArgsOK checkCxs cenv ty env (tpenv, names, takenNames) p
         [v], (tpenv, names, takenNames)
 
-    | SynSimplePats.SimplePats (ps, m) -> 
+    | SynSimplePats.SimplePats (ps, _, m) -> 
         let ptys = UnifyRefTupleType env.eContextInfo cenv env.DisplayEnv m ty ps
         let ps', (tpenv, names, takenNames) = List.mapFold (fun tpenv (ty, e) -> TcSimplePat optArgsOK checkCxs cenv ty env tpenv e) (tpenv, names, takenNames) (List.zip ptys ps)
         ps', (tpenv, names, takenNames)
 
-    | SynSimplePats.Typed (p, cty, m) ->
+    | SynSimplePats.Typed (p, cty, _, m) ->
         let cty', tpenv = TcTypeAndRecover cenv NewTyparsOK CheckCxs ItemOccurence.UseInType env tpenv cty
 
         match p with 
         // Solitary optional arguments on members 
-        | SynSimplePats.SimplePats([SynSimplePat.Id(_, _, _, _, true, _)], _) -> UnifyTypes cenv env m ty (mkOptionTy cenv.g cty')
+        | SynSimplePats.SimplePats([SynSimplePat.Id(_, _, _, _, true, _)], _, _) -> UnifyTypes cenv env m ty (mkOptionTy cenv.g cty')
         | _ -> UnifyTypes cenv env m ty cty'
 
         TcSimplePats cenv optArgsOK checkCxs ty env (tpenv, names, takenNames) p
@@ -7758,7 +7758,7 @@ and TcComputationExpression cenv env overallTy mWhole interpExpr builderTy tpenv
             | [] -> []
             | [v] -> [mkSynSimplePatVar false v.Id]
             | vs -> vs |> List.map (fun v -> mkSynSimplePatVar false v.Id)
-        SynSimplePats.SimplePats (spats, m)
+        SynSimplePats.SimplePats (spats, SynPat.Wild m, m)
 
     let mkPatForVarSpace m (patvs: Val list) = 
         match patvs with 
@@ -8383,7 +8383,8 @@ and TcComputationExpression cenv env overallTy mWhole interpExpr builderTy tpenv
 
     let lambdaExpr = 
         let mBuilderVal = mBuilderVal.MakeSynthetic()
-        SynExpr.Lambda (false, false, SynSimplePats.SimplePats ([mkSynSimplePatVar false (mkSynId mBuilderVal builderValName)], mBuilderVal), runExpr, mBuilderVal)
+        let id = mkSynId mBuilderVal builderValName
+        SynExpr.Lambda (false, false, SynSimplePats.SimplePats ([mkSynSimplePatVar false id], SynPat.Wild mBuilderVal, mBuilderVal), runExpr, mBuilderVal)
 
     let env =
         match comp with     
@@ -12678,12 +12679,12 @@ module IncrClassChecking =
 
         // Type check arguments by processing them as 'simple' patterns 
         //     NOTE: if we allow richer patterns here this is where we'd process those patterns 
-        let ctorArgNames, (_, names, _) = TcSimplePatsOfUnknownType cenv true CheckCxs env tpenv (SynSimplePats.SimplePats (spats, m))
+        let ctorArgNames, (_, names, _) = TcSimplePatsOfUnknownType cenv true CheckCxs env tpenv spats
         
         // Create the values with the given names 
         let _, vspecs = MakeSimpleVals cenv env names
 
-        if tcref.IsStructOrEnumTycon && isNil spats then 
+        if tcref.IsStructOrEnumTycon && isNil spats.Pats then 
             errorR (ParameterlessStructCtor(tcref.Range))
         
         // Put them in order 
@@ -12700,7 +12701,7 @@ module IncrClassChecking =
             let attribs = TcAttributes cenv env (AttributeTargets.Constructor ||| AttributeTargets.Method) attrs
             let memberFlags = CtorMemberFlags 
                                   
-            let synArgInfos = List.map (SynInfo.InferSynArgInfoFromSimplePat []) spats
+            let synArgInfos = List.map (SynInfo.InferSynArgInfoFromSimplePat []) spats.Pats
             let valSynData = SynValInfo([synArgInfos], SynInfo.unnamedRetVal)
             let id = ident ("new", m)
 
@@ -13556,7 +13557,7 @@ module MutRecBindingChecking =
                             error(Error(FSComp.SR.tcEnumerationsMayNotHaveMembers(), (trimRangeToLine m))) 
 
                         match classMemberDef, containerInfo with
-                        | SynMemberDefn.ImplicitCtor (vis, attrs, SynSimplePats.SimplePats(spats, _), thisIdOpt, m), ContainerInfo(_, Some(MemberOrValContainerInfo(tcref, _, baseValOpt, safeInitInfo, _))) ->
+                        | SynMemberDefn.ImplicitCtor (vis, attrs, (SynSimplePats.SimplePats _ as spats), thisIdOpt, m), ContainerInfo(_, Some(MemberOrValContainerInfo(tcref, _, baseValOpt, safeInitInfo, _))) ->
                             if tcref.TypeOrMeasureKind = TyparKind.Measure then
                                 error(Error(FSComp.SR.tcMeasureDeclarationsRequireStaticMembers(), m))
 
@@ -16628,7 +16629,7 @@ module TcDeclarations =
                 members |> List.exists (function 
                     | SynMemberDefn.Member(Binding(_, _, _, _, _, _, SynValData(Some memberFlags, _, _), SynPatForConstructorDecl SynPatForNullaryArgs, _, _, _, _), _) -> 
                         memberFlags.MemberKind=MemberKind.Constructor 
-                    | SynMemberDefn.ImplicitCtor (_, _, SynSimplePats.SimplePats(spats, _), _, _) -> isNil spats
+                    | SynMemberDefn.ImplicitCtor (_, _, SynSimplePats.SimplePats(spats, _, _), _, _) -> isNil spats
                     | _ -> false)
             let repr = SynTypeDefnSimpleRepr.General(kind, inherits, slotsigs, fields, isConcrete, isIncrClass, implicitCtorSynPats, m)
             let isAtOriginalTyconDefn = not (isAugmentationTyconDefnRepr repr)

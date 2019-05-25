@@ -614,8 +614,8 @@ module ParsedInput =
             e1 |> Option.iter walkExpr
     
         and walkSimplePats = function
-            | SynSimplePats.SimplePats (pats, _) -> List.iter walkSimplePat pats
-            | SynSimplePats.Typed (pats, ty, _) -> 
+            | SynSimplePats.SimplePats (pats, _, _) -> List.iter walkSimplePat pats
+            | SynSimplePats.Typed (pats, ty, _, _) -> 
                 walkSimplePats pats
                 walkType ty
     
@@ -765,7 +765,7 @@ module ParsedInput =
         and walkMember = function
             | SynMemberDefn.AbstractSlot (valSig, _, _) -> walkValSig valSig
             | SynMemberDefn.Member (binding, _) -> walkBinding binding
-            | SynMemberDefn.ImplicitCtor (_, attrs, SynSimplePats.SimplePats(simplePats, _), _, _) ->
+            | SynMemberDefn.ImplicitCtor (_, attrs, SynSimplePats.SimplePats(simplePats, _, _), _, _) ->
                 List.iter walkAttribute attrs
                 List.iter walkSimplePat simplePats
             | SynMemberDefn.ImplicitInherit (t, e, _, _) -> walkType t; walkExpr e
