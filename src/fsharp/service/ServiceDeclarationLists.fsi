@@ -34,7 +34,7 @@ type public FSharpDeclarationListItem =
 
     member Glyph : FSharpGlyph
 
-    member Accessibility : FSharpAccessibility option
+    member FSharpSymbol : FSharpSymbol
 
     member Kind : CompletionItemKind
 
@@ -62,8 +62,10 @@ type public FSharpDeclarationListInfo =
 
     member IsError : bool
 
+    member DisplayContext: FSharpDisplayContext
+
     // Implementation details used by other code in the compiler    
-    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * getAccessibility:(Item -> FSharpAccessibility option) * items:CompletionItem list * currentNamespace:string[] option * isAttributeApplicationContext:bool -> FSharpDeclarationListInfo
+    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * cenv: SymbolEnv * unresolvedOnly: bool * items:CompletionItem list * currentNamespace:string[] option * isAttributeApplicationContext:bool -> FSharpDeclarationListInfo
 
     static member internal Error : message:string -> FSharpDeclarationListInfo
 
