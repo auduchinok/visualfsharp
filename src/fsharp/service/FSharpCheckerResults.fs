@@ -1893,12 +1893,11 @@ type FSharpCheckFileResults
             (fun scope ->
                 let cenv = scope.SymbolEnv
                 seq {
-                    for symbolUseChunk in scope.ScopeSymbolUses.AllUsesOfSymbols do
-                        for symbolUse in symbolUseChunk do
-                            cancellationToken |> Option.iter (fun ct -> ct.ThrowIfCancellationRequested())
-                            if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
-                                let symbol = FSharpSymbol.Create(cenv, symbolUse.Item)
-                                FSharpSymbolUse(scope.TcGlobals, symbolUse.DisplayEnv, symbol, symbolUse.ItemOccurence, symbolUse.Range)
+                    for symbolUse in scope.ScopeSymbolUses.AllUsesOfSymbols do
+                        cancellationToken |> Option.iter (fun ct -> ct.ThrowIfCancellationRequested())
+                        if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
+                            let symbol = FSharpSymbol.Create(cenv, symbolUse.Item)
+                            FSharpSymbolUse(scope.TcGlobals, symbolUse.DisplayEnv, symbol, symbolUse.ItemOccurence, symbolUse.Range)
                 })
 
     member __.GetUsesOfSymbolInFile(symbol:FSharpSymbol, ?cancellationToken: CancellationToken) = 
@@ -2117,7 +2116,6 @@ type FSharpCheckProjectResults
         [| for r in tcSymbolUses do
             for symbolUseChunk in r.AllUsesOfSymbols do
                 for symbolUse in symbolUseChunk do
-                    cancellationToken |> Option.iter (fun ct -> ct.ThrowIfCancellationRequested())
                     if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
                       let symbol = FSharpSymbol.Create(cenv, symbolUse.Item)
                       yield FSharpSymbolUse(tcGlobals, symbolUse.DisplayEnv, symbol, symbolUse.ItemOccurence, symbolUse.Range) |]
