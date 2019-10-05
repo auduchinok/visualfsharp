@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\netfx.props" />
   <Import Project="..\..\eng\Versions.props"/>   <!-- keep our test deps in line with the overall compiler -->
   <PropertyGroup>
@@ -65,6 +65,10 @@
       <Link>ScriptOptionsTests.fs</Link>
     </Compile>
     <Compile Include="$(FSharpSourcesRoot)\..\tests\service\Program.fs" Condition="'$(TargetFramework)' == 'netcoreapp3.0'">
+    <Compile Include="$(FSharpSourcesRoot)\..\tests\service\PatternMatchCompilationTests.fs">
+      <Link>PatternMatchCompilationTests.fs</Link>
+    </Compile>
+    <Compile Include="$(FSharpSourcesRoot)\..\tests\service\Program.fs" Condition="'$(TargetFramework)' == 'netcoreapp2.0'">
       <Link>Program.fs</Link>
     </Compile>
     <NoneSubstituteText Include="App.config">
