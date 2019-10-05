@@ -1,3 +1,4 @@
+[<AutoOpen>]
 module internal FSharp.Compiler.Service.Tests.Common
 
 open System
@@ -332,6 +333,15 @@ let assertContainsSymbolWithName name source =
     |> Array.contains name
     |> shouldEqual true
 
+let assertContainsSymbolsWithNames (names: string list) source =
+    let symbolNames =
+        getSymbols source
+        |> Array.choose getSymbolName
+
+    for name in names do
+        symbolNames
+        |> Array.contains name
+        |> shouldEqual true
 
 let coreLibAssemblyName =
 #if NETCOREAPP2_0
