@@ -5545,7 +5545,8 @@ and TcPat warnOnUpper cenv env topValInfo vFlags (tpenv, names, takenNames) ty p
                     args, extraPatterns
                 else
                     if numArgs < numArgTys then
-                        errorR (UnionCaseWrongArguments (env.DisplayEnv, numArgTys, numArgs, m))
+                        if numArgs <> 0 then
+                            errorR (UnionCaseWrongArguments (env.DisplayEnv, numArgTys, numArgs, m))
                         args @ (List.init (numArgTys - numArgs) (fun _ -> SynPat.Wild (m.MakeSynthetic()))), extraPatterns
                     else
                         let args, remaining = args |> List.splitAt numArgTys
