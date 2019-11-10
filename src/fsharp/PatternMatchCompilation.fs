@@ -1039,7 +1039,7 @@ let CompilePatternBasic
                                                           (isNil origInputValTypars &&
                                                            not origInputVal.IsMemberOrModuleBinding &&
                                                            not ucref.Tycon.IsStructRecordOrUnionTycon  &&
-                                                           ucref.UnionCase.RecdFields.Length >= 1 &&
+                                                           ucref.UnionCase.RecdFieldsArray.Length >= 1 &&
                                                            ucref.Tycon.UnionCasesArray.Length > 1) ->
 
                        let v, vExpr = mkCompGenLocal m "unionCase" (mkProvenUnionCaseTy ucref tinst)
