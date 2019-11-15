@@ -1667,6 +1667,7 @@ module internal ParseAndCheckFile =
            tcConfig: TcConfig,
            tcGlobals: TcGlobals,
            tcImports: TcImports,
+           implicitOpenDeclarations: OpenDeclaration[],
            tcState: TcState,
            moduleNamesDict: ModuleNamesDict,
            loadClosure: LoadClosure option,
@@ -1766,7 +1767,7 @@ module internal ParseAndCheckFile =
                               reactorOps,
                               textSnapshotInfo,
                               List.tryHead implFiles,
-                              sink.GetOpenDeclarations())     
+                              Array.append implicitOpenDeclarations (sink.GetOpenDeclarations()))     
                      |> Result.Ok
             | None -> 
                 Result.Error()
@@ -2043,6 +2044,7 @@ type FSharpCheckFileResults
          tcConfig: TcConfig,
          tcGlobals: TcGlobals,
          tcImports: TcImports,
+         implicitOpenDeclarations: OpenDeclaration[],
          tcState: TcState,
          moduleNamesDict: ModuleNamesDict,
          loadClosure: LoadClosure option,
@@ -2060,7 +2062,7 @@ type FSharpCheckFileResults
         async {
             let! tcErrors, tcFileInfo = 
                 ParseAndCheckFile.CheckOneFile
-                    (parseResults, sourceText, mainInputFileName, projectFileName, tcConfig, tcGlobals, tcImports, 
+                    (parseResults, sourceText, mainInputFileName, projectFileName, tcConfig, tcGlobals, tcImports, implicitOpenDeclarations, 
                      tcState, moduleNamesDict, loadClosure, backgroundDiagnostics, reactorOps, 
                      textSnapshotInfo, userOpName, suggestNamesForErrors)
             match tcFileInfo with 
@@ -2225,7 +2227,7 @@ type FsiInteractiveChecker(legacyReferenceResolver,
             let! tcErrors, tcFileInfo =  
                 ParseAndCheckFile.CheckOneFile
                     (parseResults, sourceText, filename, "project",
-                     tcConfig, tcGlobals, tcImports,  tcState, 
+                     tcConfig, tcGlobals, tcImports, Array.empty, tcState, 
                      Map.empty, Some loadClosure, backgroundDiagnostics,
                      reactorOps, None, userOpName, suggestNamesForErrors)
 

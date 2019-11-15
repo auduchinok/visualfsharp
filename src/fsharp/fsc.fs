@@ -44,6 +44,7 @@ open FSharp.Compiler.CompileOptions
 open FSharp.Compiler.ErrorLogger
 open FSharp.Compiler.InfoReader
 open FSharp.Compiler.Lib
+open FSharp.Compiler.NameResolution
 open FSharp.Compiler.Range
 open FSharp.Compiler.Tast
 open FSharp.Compiler.Tastops
@@ -1861,7 +1862,7 @@ let main0(ctok, argv, legacyReferenceResolver, bannerAlreadyPrinted,
     // Build the initial type checking environment
     ReportTime tcConfig "Typecheck"
     use unwindParsePhase = PushThreadBuildPhaseUntilUnwind BuildPhase.TypeCheck
-    let tcEnv0 = GetInitialTcEnv (assemblyName, rangeStartup, tcConfig, tcImports, tcGlobals)
+    let tcEnv0 = GetInitialTcEnv (assemblyName, rangeStartup, tcConfig, tcImports, tcGlobals, TcResultsSink.NoSink)
 
     // Type check the inputs
     let inputs = inputs |> List.map fst
@@ -1976,7 +1977,7 @@ let main1OfAst (ctok, legacyReferenceResolver, reduceMemoryUsage, assemblyName, 
         tcGlobals,tcImports
 
     use unwindParsePhase = PushThreadBuildPhaseUntilUnwind (BuildPhase.TypeCheck)            
-    let tcEnv0 = GetInitialTcEnv (assemblyName, rangeStartup, tcConfig, tcImports, tcGlobals)
+    let tcEnv0 = GetInitialTcEnv (assemblyName, rangeStartup, tcConfig, tcImports, tcGlobals, TcResultsSink.NoSink)
 
     let tcState,topAttrs,typedAssembly,_tcEnvAtEnd = 
         TypeCheck(ctok, tcConfig, tcImports, tcGlobals, errorLogger, assemblyName, NiceNameGenerator(), tcEnv0, inputs,exiter)

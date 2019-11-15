@@ -1696,7 +1696,8 @@ type TcSymbolUses(g, capturedNameResolutions: ResizeArray<CapturedNameResolution
     member this.GetFormatSpecifierLocationsAndArity() = formatSpecifierLocations
 
 /// An accumulator for the results being emitted into the tcSink.
-type TcResultsSinkImpl(g, ?sourceText: ISourceText) =
+type TcResultsSinkImpl(g, ?sourceText: ISourceText, ?isFromImport: bool) =
+    let isFromImport = defaultArg isFromImport false
     let capturedEnvs = ResizeArray<_>()
     let capturedExprTypings = ResizeArray<_>()
     let capturedNameResolutions = ResizeArray<_>()
@@ -1741,6 +1742,7 @@ type TcResultsSinkImpl(g, ?sourceText: ISourceText) =
         TcSymbolUses(g, capturedNameResolutions, capturedFormatSpecifierLocations.ToArray())
 
     member this.GetOpenDeclarations() =
+        if isFromImport then capturedOpenDeclarations.ToArray() else
         capturedOpenDeclarations |> Seq.distinctBy (fun x -> x.Range, x.AppliedScope, x.IsOwnNamespace) |> Seq.toArray
 
     interface ITypecheckResultsSink with

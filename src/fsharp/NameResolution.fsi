@@ -381,7 +381,7 @@ type ITypecheckResultsSink =
 type internal TcResultsSinkImpl =
 
     /// Create a TcResultsSinkImpl
-    new : tcGlobals : TcGlobals * ?sourceText: ISourceText -> TcResultsSinkImpl
+    new: tcGlobals: TcGlobals * ?sourceText: ISourceText * ?isFromImport: bool -> TcResultsSinkImpl
 
     /// Get all the resolutions reported to the sink
     member GetResolutions : unit -> TcResolutions

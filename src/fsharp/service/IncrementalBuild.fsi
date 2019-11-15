@@ -55,6 +55,8 @@ type internal PartialCheckResults =
       /// Represents open declarations
       TcOpenDeclarationsRev: OpenDeclaration[] list
 
+      TcImplicitOpenDeclarations: OpenDeclaration[]
+
       /// Disambiguation table for module names
       ModuleNamesDict: ModuleNamesDict
 

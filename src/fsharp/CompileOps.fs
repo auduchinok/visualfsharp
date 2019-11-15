@@ -4755,7 +4755,7 @@ let RequireDLL (ctok, tcImports: TcImports, tcEnv, thisAssemblyName, m, file, as
     let g = tcImports.GetTcGlobals()
     let amap = tcImports.GetImportMap()
     let buildTcEnv tcEnv asm =
-        let tcEnv = AddCcuToTcEnv(g, amap, m, tcEnv, thisAssemblyName, asm.FSharpViewOfMetadata, asm.AssemblyAutoOpenAttributes, asm.AssemblyInternalsVisibleToAttributes)
+        let tcEnv = AddCcuToTcEnv(g, amap, m, tcEnv, thisAssemblyName, asm.FSharpViewOfMetadata, asm.AssemblyAutoOpenAttributes, asm.AssemblyInternalsVisibleToAttributes, TcResultsSink.NoSink)
         match asm.FSharpViewOfMetadata.FileName with
         | Some asmPath -> assemblyReferenceAdded asmPath
         | None -> ()
@@ -5263,7 +5263,7 @@ type LoadClosure with
 //--------------------------------------------------------------------------
 
 /// Build the initial type checking environment
-let GetInitialTcEnv (thisAssemblyName: string, initm: range, tcConfig: TcConfig, tcImports: TcImports, tcGlobals) =    
+let GetInitialTcEnv (thisAssemblyName: string, initm: range, tcConfig: TcConfig, tcImports: TcImports, tcGlobals, importedAutoOpensSink) =    
     let initm = initm.StartRange
 
     let ccus = 
@@ -5272,10 +5272,10 @@ let GetInitialTcEnv (thisAssemblyName: string, initm: range, tcConfig: TcConfig,
 
     let amap = tcImports.GetImportMap()
 
-    let tcEnv = CreateInitialTcEnv(tcGlobals, amap, initm, thisAssemblyName, ccus)
+    let tcEnv = CreateInitialTcEnv(tcGlobals, amap, initm, thisAssemblyName, ccus, importedAutoOpensSink)
 
     if tcConfig.checkOverflow then
-        try TcOpenDecl TcResultsSink.NoSink tcGlobals amap initm initm tcEnv (pathToSynLid initm (splitNamespace FSharpLib.CoreOperatorsCheckedName))
+        try TcOpenDecl importedAutoOpensSink tcGlobals amap initm initm tcEnv (pathToSynLid initm (splitNamespace FSharpLib.CoreOperatorsCheckedName))
         with e -> errorRecovery e initm; tcEnv
     else
         tcEnv

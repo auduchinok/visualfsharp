@@ -1311,7 +1311,7 @@ type internal FsiDynamicCompiler
         let tcConfig = TcConfig.Create(tcConfigB,validate=false)
         let optEnv0 = GetInitialOptimizationEnv (tcImports, tcGlobals)
         let emEnv = ILRuntimeWriter.emEnv0
-        let tcEnv = GetInitialTcEnv (assemblyName, rangeStdin, tcConfig, tcImports, tcGlobals)
+        let tcEnv = GetInitialTcEnv (assemblyName, rangeStdin, tcConfig, tcImports, tcGlobals, TcResultsSink.NoSink)
         let ccuName = assemblyName 
 
         let tcState = GetInitialTcState (rangeStdin, ccuName, tcConfig, tcGlobals, tcImports, niceNameGen, tcEnv)

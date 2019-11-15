@@ -1035,6 +1035,9 @@ type TypeCheckAccumulator =
       /// Accumulated 'open' declarations, last file first
       tcOpenDeclarationsRev: OpenDeclaration[] list
 
+      /// Open declarations imported with assembly level AutoOpen attribute
+      tcImplicitOpenDeclarations: OpenDeclaration[]
+      
       topAttribs: TopAttribs option
 
       /// Result of checking most recent file, if any
@@ -1130,6 +1133,8 @@ type PartialCheckResults =
       /// Kept in a stack so that each incremental update shares storage with previous files
       TcOpenDeclarationsRev: OpenDeclaration[] list
 
+      TcImplicitOpenDeclarations: OpenDeclaration[]
+
       /// Disambiguation table for module names
       ModuleNamesDict: ModuleNamesDict
 
@@ -1156,6 +1161,7 @@ type PartialCheckResults =
           TcResolutionsRev = tcAcc.tcResolutionsRev
           TcSymbolUsesRev = tcAcc.tcSymbolUsesRev
           TcOpenDeclarationsRev = tcAcc.tcOpenDeclarationsRev
+          TcImplicitOpenDeclarations = tcAcc.tcImplicitOpenDeclarations
           TcDependencyFiles = tcAcc.tcDependencyFiles
           TopAttribs = tcAcc.topAttribs
           ModuleNamesDict = tcAcc.tcModuleNamesDict
@@ -1327,7 +1333,10 @@ type IncrementalBuilder(tcGlobals, frameworkTcImports, nonFrameworkAssemblyInput
                 return frameworkTcImports           
           }
 
-        let tcInitial = GetInitialTcEnv (assemblyName, rangeStartup, tcConfig, tcImports, tcGlobals)
+        let implicitOpensSink = TcResultsSinkImpl (tcGlobals, isFromImport = true)
+        let tcSink = TcResultsSink.WithSink implicitOpensSink
+
+        let tcInitial = GetInitialTcEnv (assemblyName, rangeStartup, tcConfig, tcImports, tcGlobals, tcSink)
         let tcState = GetInitialTcState (rangeStartup, assemblyName, tcConfig, tcGlobals, tcImports, niceNameGen, tcInitial)
         let loadClosureErrors = 
            [ match loadClosureOpt with 
@@ -1352,7 +1361,8 @@ type IncrementalBuilder(tcGlobals, frameworkTcImports, nonFrameworkAssemblyInput
               latestCcuSigForFile=None
               tcDependencyFiles=basicDependencies
               tcErrorsRev = [ initialErrors ] 
-              tcModuleNamesDict = Map.empty }   
+              tcModuleNamesDict = Map.empty
+              tcImplicitOpenDeclarations = implicitOpensSink.GetOpenDeclarations() }
         return tcAcc }
                 
     /// This is a build task function that gets placed into the build rules as the computation for a Vector.ScanLeft

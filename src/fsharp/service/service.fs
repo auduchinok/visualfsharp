@@ -509,7 +509,8 @@ type BackgroundCompiler(legacyReferenceResolver, projectCacheSize, keepAssemblyC
                                          options.ProjectFileName, 
                                          tcPrior.TcConfig,
                                          tcPrior.TcGlobals,
-                                         tcPrior.TcImports, 
+                                         tcPrior.TcImports,
+                                         tcPrior.TcImplicitOpenDeclarations,
                                          tcPrior.TcState,
                                          tcPrior.ModuleNamesDict,
                                          loadClosure,
@@ -673,6 +674,10 @@ type BackgroundCompiler(legacyReferenceResolver, projectCacheSize, keepAssemblyC
                 let tcErrors = [| yield! creationErrors; yield! ErrorHelpers.CreateErrorInfos (errorOptions, false, filename, tcProj.TcErrors, suggestNamesForErrors) |]
                 let parseResults = FSharpParseFileResults(errors = untypedErrors, input = parseTreeOpt, parseHadErrors = false, dependencyFiles = builder.AllDependenciesDeprecated)
                 let loadClosure = scriptClosureCacheLock.AcquireLock (fun ltok -> scriptClosureCache.TryGet (ltok, options) )
+                let openDeclarations =
+                    Array.append
+                        tcProj.TcImplicitOpenDeclarations
+                        (List.head tcProj.TcOpenDeclarationsRev)
                 let typedResults = 
                     FSharpCheckFileResults.Make
                         (filename, 
@@ -696,7 +701,7 @@ type BackgroundCompiler(legacyReferenceResolver, projectCacheSize, keepAssemblyC
                          tcProj.TcEnvAtEnd.NameEnv,
                          loadClosure, 
                          tcProj.LatestImplementationFile,
-                         List.head tcProj.TcOpenDeclarationsRev) 
+                         openDeclarations)
                 return (parseResults, typedResults)
            })
 

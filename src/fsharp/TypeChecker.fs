@@ -17453,7 +17453,7 @@ and TcModuleOrNamespaceElements cenv parent endm env xml mutRecNSInfo defs =
 //-------------------------------------------------------------------------- 
 
 
-let ApplyAssemblyLevelAutoOpenAttributeToTcEnv g amap (ccu: CcuThunk) scopem env (p, root) = 
+let ApplyAssemblyLevelAutoOpenAttributeToTcEnv g amap (ccu: CcuThunk) scopem importedAutoOpensSink env (p, root) = 
     let warn() = 
         warning(Error(FSComp.SR.tcAttributeAutoOpenWasIgnored(p, ccu.AssemblyName), scopem))
         env
@@ -17465,10 +17465,10 @@ let ApplyAssemblyLevelAutoOpenAttributeToTcEnv g amap (ccu: CcuThunk) scopem env
     | ValueNone -> warn()
     | ValueSome _ -> 
         let openDecl = OpenDeclaration.Create ([], [modref], scopem, false)
-        OpenEntities TcResultsSink.NoSink g amap scopem root env [modref] openDecl
+        OpenEntities importedAutoOpensSink g amap scopem root env [modref] openDecl
 
 // Add the CCU and apply the "AutoOpen" attributes
-let AddCcuToTcEnv(g, amap, scopem, env, assemblyName, ccu, autoOpens, internalsVisible) = 
+let AddCcuToTcEnv(g, amap, scopem, env, assemblyName, ccu, autoOpens, internalsVisible, importedAutoOpensSink) = 
     let env = AddNonLocalCcu g amap scopem env assemblyName (ccu, internalsVisible)
 
     // See https://fslang.uservoice.com/forums/245727-f-language/suggestions/6107641-make-microsoft-prefix-optional-when-using-core-f
@@ -17483,13 +17483,13 @@ let AddCcuToTcEnv(g, amap, scopem, env, assemblyName, ccu, autoOpens, internalsV
         else 
             autoOpens
 
-    let env = (env, autoOpens) ||> List.fold (ApplyAssemblyLevelAutoOpenAttributeToTcEnv g amap ccu scopem)
+    let env = (env, autoOpens) ||> List.fold (ApplyAssemblyLevelAutoOpenAttributeToTcEnv g amap ccu scopem importedAutoOpensSink)
     env
 
-let CreateInitialTcEnv(g, amap, scopem, assemblyName, ccus) =
+let CreateInitialTcEnv(g, amap, scopem, assemblyName, ccus, importedAutoOpensSink) =
     (emptyTcEnv g, ccus) ||> List.fold (fun env (ccu, autoOpens, internalsVisible) -> 
         try 
-            AddCcuToTcEnv(g, amap, scopem, env, assemblyName, ccu, autoOpens, internalsVisible)
+            AddCcuToTcEnv(g, amap, scopem, env, assemblyName, ccu, autoOpens, internalsVisible, importedAutoOpensSink)
         with e -> 
             errorRecovery e scopem 
             env) 

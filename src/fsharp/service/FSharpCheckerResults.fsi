@@ -311,6 +311,7 @@ type public FSharpCheckFileResults =
          tcConfig: TcConfig *
          tcGlobals: TcGlobals *
          tcImports: TcImports *
+         implicitOpenDeclarations: OpenDeclaration[] *
          tcState: TcState *
          moduleNamesDict: ModuleNamesDict *
          loadClosure: LoadClosure option *
