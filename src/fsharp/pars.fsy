@@ -977,12 +977,12 @@ classMemberSpfn:
      { if Option.isSome $2 then errorR(Error(FSComp.SR.parsVisibilityDeclarationsShouldComePriorToIdentifier(),rhs parseState 2))
        SynMemberSig.NestedType($5,rhs2 parseState 3 5) }
 
-  | opt_attributes opt_declVisibility NEW COLON topTypeWithTypeConstraints  
-     { let vis,doc,(ty,valSynInfo) = $2,grabXmlDoc(parseState,3),$5 
-       let m = unionRanges (rhs parseState 3) ty.Range 
-       let isInline = false 
+  | opt_attributes opt_declVisibility NEW COLON topTypeWithTypeConstraints
+     { let vis, doc, (ty, valSynInfo) = $2, grabXmlDoc (parseState, 3), $5
+       let m = rhs2 parseState 1 5
+       let isInline = false
        let valSpfn = ValSpfn ($1, mkSynId (rhs parseState 3) "new", noInferredTypars, ty, valSynInfo, isInline, false, doc, vis, None, m)
-       SynMemberSig.Member(valSpfn, CtorMemberFlags,m) }
+       SynMemberSig.Member (valSpfn, CtorMemberFlags, m) }
 
 
 /* The optional "with get,set" on a member in a signature */
@@ -1888,16 +1888,16 @@ classDefnMember:
        let isStatic, flags = $3
        $4 $1 isStatic flags rangeStart }
 
-  | opt_attributes opt_declVisibility NEW  atomicPattern optAsSpec EQUALS typedSeqExprBlock opt_ODECLEND
-     {  let m = unionRanges (rhs2 parseState 3 6) $7.Range 
-        let expr = $7
-        let valSynData = SynValData (Some CtorMemberFlags, SynValInfo([SynInfo.InferSynArgInfoFromPat $4],SynInfo.unnamedRetVal), $5) 
-        let vis = $2 
-        let declPat = SynPat.LongIdent (LongIdentWithDots([mkSynId (rhs parseState 3) "new"],[]),None,Some noInferredTypars, SynConstructorArgs.Pats [$4],vis,rhs parseState 3)
-        // Check that 'SynPatForConstructorDecl' matches this correctly
-        assert (match declPat with SynPatForConstructorDecl _ -> true | _ -> false)
-        [ SynMemberDefn.Member(Binding (None,NormalBinding,false,false,$1,grabXmlDoc(parseState,3),valSynData, declPat,None,expr,m,NoSequencePointAtInvisibleBinding),m) ] }
-        
+  | opt_attributes opt_declVisibility NEW atomicPattern optAsSpec EQUALS typedSeqExprBlock opt_ODECLEND
+     { let m = rhs2 parseState 1 7
+       let expr = $7
+       let valSynData = SynValData (Some CtorMemberFlags, SynValInfo ([ SynInfo.InferSynArgInfoFromPat $4 ], SynInfo.unnamedRetVal), $5)
+       let vis = $2
+       let declPat = SynPat.LongIdent (LongIdentWithDots([mkSynId (rhs parseState 3) "new"],[]),None,Some noInferredTypars, SynConstructorArgs.Pats [$4], vis, rhs parseState 3)
+       // Check that 'SynPatForConstructorDecl' matches this correctly
+       assert (match declPat with SynPatForConstructorDecl _ -> true | _ -> false)
+       [ SynMemberDefn.Member (Binding (None, NormalBinding, false, false, $1, grabXmlDoc (parseState, 3), valSynData, declPat, None, expr, m, NoSequencePointAtInvisibleBinding), m) ] }
+
   | opt_attributes opt_declVisibility STATIC typeKeyword tyconDefn 
      {  if Option.isSome $2 then errorR(Error(FSComp.SR.parsVisibilityDeclarationsShouldComePriorToIdentifier(),rhs parseState 2))
         [ SynMemberDefn.NestedType($5,None,rhs2 parseState 3 5) ] }
