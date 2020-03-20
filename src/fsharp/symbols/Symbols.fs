@@ -187,6 +187,8 @@ module Impl =
         | Some (_, docsig) -> docsig
         | _ -> ""
 
+    let mutable true3 = (fun (_: obj) _ _ -> true)
+
 type FSharpDisplayContext(denv: TcGlobals -> DisplayEnv) = 
     member x.Contents g = denv g
 
@@ -242,7 +244,7 @@ type FSharpSymbol(cenv: SymbolEnv, item: (unit -> Item), access: (FSharpSymbol -
         FSharpSymbol.Create(SymbolEnv(g, thisCcu, Some thisCcuTye, tcImports), item)
 
     static member Create(cenv, item): FSharpSymbol = 
-        let dflt() = FSharpSymbol(cenv, (fun () -> item), (fun _ _ _ -> true)) 
+        let dflt() = FSharpSymbol(cenv, (fun () -> item), true3) 
         match item with 
         | Item.Value v -> FSharpMemberOrFunctionOrValue(cenv, V v, item) :> _
         | Item.UnionCase (uinfo, _) -> FSharpUnionCase(cenv, uinfo.UnionCaseRef) :> _
@@ -1075,10 +1077,7 @@ and [<Class>] FSharpAccessibilityRights(thisCcu: CcuThunk, ad:AccessorDomain) =
     member internal __.Contents = ad
 
 and FSharpActivePatternCase(cenv, apinfo: PrettyNaming.ActivePatternInfo, ty, n, valOpt: ValRef option, item) = 
-
-    inherit FSharpSymbol (cenv, 
-                          (fun () -> item), 
-                          (fun _ _ _ -> true))
+    inherit FSharpSymbol (cenv, (fun () -> item), true3)
 
     member __.Name = apinfo.ActiveTags.[n]
 
@@ -1119,10 +1118,7 @@ and FSharpActivePatternGroup(cenv, apinfo:PrettyNaming.ActivePatternInfo, ty, va
             | Parent p -> Some (FSharpEntity(cenv, p)))
 
 and FSharpGenericParameter(cenv, v:Typar) = 
-
-    inherit FSharpSymbol (cenv, 
-                          (fun () -> Item.TypeVar(v.Name, v)), 
-                          (fun _ _ _ad -> true))
+    inherit FSharpSymbol (cenv, (fun () -> Item.TypeVar(v.Name, v)), true3)
 
     member __.Name = v.DisplayName
 
@@ -2305,7 +2301,7 @@ and FSharpStaticParameter(cenv, sp: Tainted< ExtensionTyping.ProvidedParameterIn
                                 let spKind = Import.ImportProvidedType cenv.amap m (sp.PApply((fun x -> x.ParameterType), m))
                                 let nm = sp.PUntaint((fun p -> p.Name), m)
                                 Item.ArgName((mkSynId m nm, spKind, None))), 
-                         (fun _ _ _ -> true))
+                         true3)
 
     member __.Name = 
         protect <| fun () -> 
@@ -2342,7 +2338,7 @@ and FSharpParameter(cenv, paramTy:TType, topArgInfo:ArgReprInfo, mOpt, isParamAr
                          (fun () -> 
                             let m = match mOpt with Some m  -> m | None -> range0
                             Item.ArgName((match topArgInfo.Name with None -> mkSynId m "" | Some v -> v), paramTy, None)), 
-                         (fun _ _ _ -> true))
+                         true3)
     let attribs = topArgInfo.Attribs
     let idOpt = topArgInfo.Name
     let m = match mOpt with Some m  -> m | None -> range0
