@@ -2089,7 +2089,7 @@ type FSharpMemberOrFunctionOrValue(cenv, d:FSharpMemberOrValData, item) =
     member x.IsRefCell =
         not x.IsMember && not x.IsConstructorThisValue &&
         match d with
-        | V valRef -> (Tastops.isRefCellTy cenv.g valRef.Type)
+        | V valRef -> (TypedTreeOps.isRefCellTy cenv.g valRef.Type)
         | _ -> false
 
     member x.IsValCompiledAsMethod =
@@ -2530,9 +2530,9 @@ type FSharpParameter(cenv, paramTy: TType, topArgInfo: ArgReprInfo, ownerOpt, ow
     member __.IsOptionalArg = isOptionalArg
 
     // todo: cover IL attrs? use different name? (we need it for symbols defined in F# source only)
-    member _.IsCliOptional = HasFSharpAttributeOpt cenv.g cenv.g.attrib_OptionalAttribute attribs
-    member _.IsParamArray = HasFSharpAttribute cenv.g cenv.g.attrib_ParamArrayAttribute attribs
-    member _.IsOut = HasFSharpAttribute cenv.g cenv.g.attrib_OutAttribute attribs 
+    member _.IsCliOptional = HasFSharpAttributeOpt cenv.g cenv.g.attrib_OptionalAttribute topArgInfo.Attribs
+    member _.IsParamArray = HasFSharpAttribute cenv.g cenv.g.attrib_ParamArrayAttribute topArgInfo.Attribs
+    member _.IsOut = HasFSharpAttribute cenv.g cenv.g.attrib_OutAttribute topArgInfo.Attribs 
 
     member _.IsWitnessArg = isWitnessArg
     
