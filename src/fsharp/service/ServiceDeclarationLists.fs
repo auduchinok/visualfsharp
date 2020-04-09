@@ -7,6 +7,9 @@
 
 namespace FSharp.Compiler.SourceCodeServices
 
+open System
+open System.Collections.Generic
+open System.Diagnostics
 open FSharp.Compiler 
 open FSharp.Compiler.AbstractIL.Internal.Library  
 open FSharp.Compiler.AbstractIL.Diagnostics 
@@ -474,10 +477,8 @@ module internal DescriptionListsImpl =
 
 /// An intellisense declaration
 [<Sealed>]
-type FSharpDeclarationListItem(name: string, nameInCode: string, fullName: string, glyph: FSharpGlyph, info,
-                               item: CompletionItem, symbol: FSharpSymbol, namespaceToOpen: string option) =
-    member _.Name = name
-    member _.NameInCode = nameInCode
+type FSharpDeclarationListItem(name: string, info, item: CompletionItem, symbol: FSharpSymbol, namespaceToOpen: string[]) =
+    member __.Name = name
 
     member decl.StructuredDescriptionTextAsync = decl.StructuredDescriptionText |> async.Return
 
@@ -494,34 +495,25 @@ type FSharpDeclarationListItem(name: string, nameInCode: string, fullName: strin
         decl.StructuredDescriptionText
         |> Tooltips.ToFSharpToolTipText
 
-    member _.Glyph = glyph 
     member _.FSharpSymbol = symbol
     member _.Kind = item.Kind
     member _.IsOwnMember = item.IsOwnMember
     member _.MinorPriority = item.MinorPriority
-    member _.FullName = fullName
     member _.IsResolved = item.Unresolved.IsNone
     member _.NamespaceToOpen = namespaceToOpen
 
 /// A table of declarations for Intellisense completion 
 [<Sealed>]
-type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForType: bool, isError: bool, displayContext: FSharpDisplayContext) = 
+type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem seq, isError: bool, displayContext: FSharpDisplayContext) =
     static let fsharpNamespace = [|"Microsoft"; "FSharp"|]
 
     member _.Items = declarations
-    member _.IsForType = isForType
     member _.IsError = isError
     member __.DisplayContext = displayContext
 
     // Make a 'Declarations' object for a set of selected items
-    static member Create(infoReader:InfoReader, m: range, denv, cenv: SymbolEnv, unresolvedOnly: bool, items: CompletionItem list, currentNamespace: string[] option, isAttributeApplicationContext: bool) =
+    static member Create(infoReader:InfoReader, m: range, denv, cenv: SymbolEnv, unresolvedOnly: bool, items: CompletionItem list, isAttributeApplicationContext: bool) =
         let g = infoReader.g
-        let isForType = items |> List.exists (fun x -> x.Type.IsSome)
-
-        let items =
-            items |> List.filter (fun item ->
-                if unresolvedOnly then item.Unresolved.IsSome else
-                not (IsExplicitlySuppressed g item.Item))
 
         let tyconRefOptEq tref1 tref2 =
             match tref1, tref2 with
@@ -531,7 +523,7 @@ type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForT
         // Adjust items priority. Sort by name. For things with the same name,
         //     - show types with fewer generic parameters first
         //     - show types before over other related items - they usually have very useful XmlDocs 
-        let _, _, items = 
+        let _, _, itemsWithPriority = 
             items 
             |> List.map (fun x ->
                 match x.Item with
@@ -554,17 +546,12 @@ type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForT
                     x.MinorPriority, normalizedPrior, { x with MinorPriority = normalizedPrior } :: acc
                 ) (0, 0, [])
 
-        if verbose then dprintf "service.ml: mkDecls: %d found groups after filtering\n" (List.length items); 
-
-        // Group by full name for unresolved items and by display name for resolved ones.
-        let items = 
-            (if unresolvedOnly then items else
-                items
-                |> List.rev
-                // Prefer items from file check results to ones from referenced assemblies via GetAssemblyContent ("all entities")
-                |> List.sortBy (fun x -> x.Unresolved.IsSome) 
-                // Remove all duplicates. We've put the types first, so this removes the DelegateCtor and DefaultStructCtor's.
-                |> SymbolHelpers.RemoveDuplicateCompletionItems g)
+        let groupedItems =
+            itemsWithPriority
+            |> List.rev
+            // Remove all duplicates. We've put the types first, so this removes the DelegateCtor and DefaultStructCtor's.
+            |> List.sortBy (fun x -> x.Unresolved.IsSome)
+            |> SymbolHelpers.RemoveDuplicateCompletionItems g
             |> List.groupBy (fun x ->
                 match x.Unresolved with
                 | Some u -> 
@@ -579,10 +566,16 @@ type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForT
                     | Some u -> u.DisplayName
                     | None -> item.Item.DisplayName
                 name, items)
+//            |> List.groupBy (fun x ->
+//                match x.Unresolved with
+//                | Some u -> u.DisplayName
+//                | None -> x.Item.DisplayName)
 
-        // Filter out operators, active patterns (as values) and the empty list
-        let items = 
-            // Check whether this item looks like an operator.
+        let result = List()
+
+        for displayName, itemsWithSameName in groupedItems do
+            if displayName = "[]" then () else
+
             let isOperatorItem name (items: CompletionItem list) =
                 match items with
                 | [item] ->
@@ -599,81 +592,60 @@ type FSharpDeclarationListInfo(declarations: FSharpDeclarationListItem[], isForT
                     | _ -> false
                 | _ -> false
 
-            items |> List.filter (fun (displayName, items) -> 
-                not (isOperatorItem displayName items) && 
-                not (displayName = "[]") && // list shows up as a Type and a UnionCase, only such entity with a symbolic name, but want to filter out of intellisense
-                not (isActivePatternItem items))
+            if isOperatorItem displayName itemsWithSameName || isActivePatternItem itemsWithSameName then () else
 
-        let decls = 
-            items 
-            |> List.map (fun (displayName, itemsWithSameFullName) -> 
-                match itemsWithSameFullName with
-                | [] -> failwith "Unexpected empty bag"
-                | _ ->
-                    let items =
-                        match itemsWithSameFullName |> List.partition (fun x -> x.Unresolved.IsNone) with
-                        | [], unresolved -> unresolved
-                        // if there are resolvable items, throw out unresolved to prevent duplicates like `Set` and `FSharp.Collections.Set`.
-                        | resolved, _ -> resolved 
-                    
-                    let item = items.Head
-                    let glyph = GlyphOfItem(denv, item.Item)
+            match itemsWithSameName with
+            | [] -> failwith "Unexpected empty bag"
+            | _ ->
 
-                    let name, nameInCode =
-                        if displayName.StartsWithOrdinal("( ") && displayName.EndsWithOrdinal(" )") then
-                            let cleanName = displayName.[2..displayName.Length - 3]
-                            cleanName,
-                            if IsOperatorName displayName then cleanName else "``" + cleanName + "``"
-                        else 
-                            displayName,
-                            match item.Unresolved with
-                            | Some _ -> displayName
-                            | None -> Lexhelp.Keywords.QuoteIdentifierIfNeeded displayName
+            let partitionedItems =
+                match itemsWithSameName |> List.partition (fun x -> x.Unresolved.IsNone) with
+                | [], unresolved -> unresolved
+                // if there are resolvable items, throw out unresolved to prevent duplicates like `Set` and `FSharp.Collections.Set`.
+                | resolved, _ -> resolved 
 
-                    let isAttributeItem = lazy (SymbolHelpers.IsAttribute infoReader item.Item)
+            let item = partitionedItems.Head
+            if unresolvedOnly && item.Unresolved.IsNone then () else
+            if IsExplicitlySuppressed g item.Item then () else
 
-                    let cutAttributeSuffix (name: string) =
-                        if isAttributeApplicationContext && name <> "Attribute" && name.EndsWithOrdinal("Attribute") && isAttributeItem.Value then
-                            name.[0..name.Length - "Attribute".Length - 1]
-                        else name
+            let name =
+                if displayName.StartsWithOrdinal("( ") && displayName.EndsWithOrdinal(" )") then
+                    displayName.[2..displayName.Length - 3]
+                else
+                    displayName
 
-                    let name = cutAttributeSuffix name
-                    let nameInCode = cutAttributeSuffix nameInCode
-                    
-                    let fullName = 
-                        match item.Unresolved with
-                        | Some x -> x.FullName
-                        | None -> SymbolHelpers.FullNameOfItem g item.Item
-                    
-                    let namespaceToOpen = 
-                        item.Unresolved 
-                        |> Option.map (fun x -> x.Namespace)
-                        |> Option.bind (fun ns ->
-                            if ns |> Array.startsWith fsharpNamespace then None
-                            else Some ns)
-                        |> Option.map (fun ns ->
-                            match currentNamespace with
-                            | Some currentNs ->
-                               if ns |> Array.startsWith currentNs then
-                                 ns.[currentNs.Length..]
-                               else ns
-                            | None -> ns)
-                        |> Option.bind (function
-                            | [||] -> None
-                            | ns -> Some (System.String.Join(".", ns)))
+            let cutAttributeSuffix isAttributeApplicationContext infoReader (item: CompletionItem) (name: string) =
+                if isAttributeApplicationContext &&
+                        name.EndsWithOrdinal("Attribute") && name.Length > "Attribute".Length &&
+                        SymbolHelpers.IsAttribute infoReader item.Item then
+                    name.[0..name.Length - "Attribute".Length - 1]
+                else
+                    name
 
-                    FSharpDeclarationListItem(
-                        name, nameInCode, fullName, glyph, Choice1Of2 (items, infoReader, m, denv),
-                        item, FSharpSymbol.Create(cenv, item.ItemWithInst.Item), namespaceToOpen))
+            let name = cutAttributeSuffix isAttributeApplicationContext infoReader item name
 
-        new FSharpDeclarationListInfo(Array.ofList decls, isForType, false, FSharpDisplayContext(fun _ -> denv))
-    
+            let namespaceToOpen =
+                item.Unresolved
+                |> Option.map (fun x ->
+                    let ns = x.Namespace
+                    if Array.startsWith fsharpNamespace ns then Array.Empty() else ns)
+                |> Option.defaultValue (System.Array.Empty())
+
+            let item =
+                FSharpDeclarationListItem(
+                    name, Choice1Of2 (partitionedItems, infoReader, m, denv),
+                    item, FSharpSymbol.Create(cenv, item.ItemWithInst.Item), namespaceToOpen)
+
+            result.Add(item)
+
+        FSharpDeclarationListInfo(result, false, FSharpDisplayContext(fun _ -> denv))
+
     static member Error message = 
-        new FSharpDeclarationListInfo(
-                [| FSharpDeclarationListItem("<Note>", "<Note>", "<Note>", FSharpGlyph.Error, Choice2Of2 (FSharpToolTipText [FSharpStructuredToolTipElement.CompositionError message]),
-                                             Unchecked.defaultof<_>, Unchecked.defaultof<_>, None) |], false, true, Unchecked.defaultof<_>)
+        FSharpDeclarationListInfo(
+                [| FSharpDeclarationListItem("<Note>", Choice2Of2 (FSharpToolTipText [FSharpStructuredToolTipElement.CompositionError message]),
+                                             Unchecked.defaultof<_>, Unchecked.defaultof<_>, System.Array.Empty()) |], true, Unchecked.defaultof<_>)
     
-    static member Empty = FSharpDeclarationListInfo([| |], false, false, Unchecked.defaultof<_>)
+    static member Empty = FSharpDeclarationListInfo([| |], false, Unchecked.defaultof<_>)
 
 
 
