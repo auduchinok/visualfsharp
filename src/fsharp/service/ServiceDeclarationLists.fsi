@@ -16,12 +16,9 @@ open FSharp.Compiler.TypedTreeOps
 // Note: this type holds a weak reference to compiler resources. 
 type public FSharpDeclarationListItem =
     /// Get the display name for the declaration.
-    member Name : string
+    member Name: string
 
-    /// Get the name for the declaration as it's presented in source code.
-    member NameInCode : string
-
-    [<Obsolete("This operation is no longer asynchronous, please use the non-async version")>]
+    /// Get the description text, asynchronously.  Never returns "Loading...".
     member StructuredDescriptionTextAsync : Async<FSharpStructuredToolTipText>
 
     /// Get the description text.
@@ -32,8 +29,6 @@ type public FSharpDeclarationListItem =
 
     member DescriptionText : FSharpToolTipText
 
-    member Glyph : FSharpGlyph
-
     member FSharpSymbol : FSharpSymbol
 
     member Kind : CompletionItemKind
@@ -42,11 +37,9 @@ type public FSharpDeclarationListItem =
 
     member MinorPriority : int
 
-    member FullName : string
-
     member IsResolved : bool
 
-    member NamespaceToOpen : string option
+    member NamespaceToOpen : string[]
 
 
 [<Sealed>]
@@ -56,16 +49,14 @@ type public FSharpDeclarationListItem =
 // Note: this type holds a weak reference to compiler resources. 
 type public FSharpDeclarationListInfo =
 
-    member Items : FSharpDeclarationListItem[]
-
-    member IsForType : bool
+    member Items : FSharpDeclarationListItem seq
 
     member IsError : bool
 
     member DisplayContext: FSharpDisplayContext
 
     // Implementation details used by other code in the compiler    
-    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * cenv: SymbolEnv * unresolvedOnly: bool * items:CompletionItem list * currentNamespace:string[] option * isAttributeApplicationContext:bool -> FSharpDeclarationListInfo
+    static member internal Create : infoReader:InfoReader * m:range * denv:DisplayEnv * cenv: SymbolEnv * unresolvedOnly: bool * items:CompletionItem list * isAttributeApplicationContex:bool -> FSharpDeclarationListInfo
 
     static member internal Error : message:string -> FSharpDeclarationListInfo
 
