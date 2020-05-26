@@ -79,10 +79,11 @@ type public FSharpChecker =
     /// <param name="keepAllBackgroundSymbolUses">Indicate whether all symbol uses should be kept in background checking</param>
     /// <param name="enableBackgroundItemKeyStoreAndSemanticClassification">Indicates whether a table of symbol keys should be kept for background compilation</param>
     /// <param name="enablePartialTypeChecking">Indicates whether to perform partial type checking. Cannot be set to true if keepAssmeblyContents is true. If set to true, can cause duplicate type-checks when richer information on a file is needed, but can skip background type-checking entirely on implementation files with signature files.</param>
+    /// <param name="reactorListener">An optional listener to monitor reactor thread events. Overrides any existing reactor listener</param>
     static member Create: 
         ?projectCacheSize: int * ?keepAssemblyContents: bool * ?keepAllBackgroundResolutions: bool  *
         ?legacyReferenceResolver: ReferenceResolver.Resolver * ?tryGetMetadataSnapshot: ILReaderTryGetMetadataSnapshot *
-        ?suggestNamesForErrors: bool * ?keepAllBackgroundSymbolUses: bool * ?enableBackgroundItemKeyStoreAndSemanticClassification: bool * ?enablePartialTypeChecking: bool
+        ?suggestNamesForErrors: bool * ?keepAllBackgroundSymbolUses: bool * ?enableBackgroundItemKeyStoreAndSemanticClassification: bool * ?enablePartialTypeChecking: bool * ?reactorListener: IReactorListener
           -> FSharpChecker
 
     /// <summary>
