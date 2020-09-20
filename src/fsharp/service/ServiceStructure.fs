@@ -528,8 +528,7 @@ module Structure =
                 for Field (attrs, _, _, _, _, _, _, fr) in fields do
                     rcheck Scope.RecordField Collapse.Below fr fr
                     parseAttributes attrs
-            | SynTypeDefnSimpleRepr.Union (_, cases, ur) ->
-                rcheck Scope.UnionDefn Collapse.Same ur ur
+            | SynTypeDefnSimpleRepr.Union (_, cases, _) ->
                 for UnionCase (attrs, _, _, _, _, cr) in cases do
                     rcheck Scope.UnionCase Collapse.Below cr cr
                     parseAttributes attrs
