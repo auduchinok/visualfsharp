@@ -159,8 +159,6 @@ let rec SimplePatOfPat (synArgNameGenerator: SynArgNameGenerator) p =
         SynSimplePat.Id (v, None, false, false, true, m),
         None
 
-    | SynPat.Paren (p, _) -> SimplePatOfPat synArgNameGenerator p
-
     | SynPat.FromParseError (p, _) -> SimplePatOfPat synArgNameGenerator p
 
     | _ ->
