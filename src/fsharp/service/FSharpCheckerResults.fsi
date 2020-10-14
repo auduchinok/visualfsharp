@@ -119,6 +119,9 @@ type public FSharpCheckFileResults =
     /// <param name="getAllEntities">
     ///    Function that returns all entities from current and referenced assemblies.
     /// </param>
+    /// <param name="unresolvedOnly">
+    ///    Description was required.
+    /// </param>
     /// <param name="hasTextChangedSinceLastTypecheck">
     ///    If text has been used from a captured name resolution from the typecheck, then 
     ///    callback to the client to check if the text has changed. If it has, then give up

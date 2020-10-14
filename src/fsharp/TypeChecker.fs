@@ -5975,7 +5975,7 @@ and TcExprUndelayed cenv overallTy env tpenv (synExpr: SynExpr) =
         CallExprHasTypeSink cenv.tcSink (m, env.NameEnv, overallTy, env.AccessRights)
         TcConstExpr cenv overallTy env m tpenv synConst
 
-    | SynExpr.Lambda (_, _, _, _, m) ->
+    | SynExpr.Lambda (_, _, _, _, _, m) ->
         CallExprHasTypeSink cenv.tcSink (m, env.NameEnv, overallTy, env.AccessRights)
         TcIteratedLambdas cenv true env overallTy Set.empty tpenv synExpr
 
