@@ -121,6 +121,9 @@ type public FSharpCheckFileResults =
     /// <param name="getAllEntities">
     ///    Function that returns all entities from current and referenced assemblies.
     /// </param>
+    /// <param name="unresolvedOnly">
+    ///    Description was required.
+    /// </param>
     member GetDeclarationListInfo: parsedFileResults:FSharpParseFileResults option * line: int * lineText:string * partialName: PartialLongName * ?getAllEntities: (unit -> AssemblySymbol list) * ?unresolvedOnly: bool -> FSharpDeclarationListInfo
 
     /// <summary>Get the items for a declaration list in FSharpSymbol format</summary>
