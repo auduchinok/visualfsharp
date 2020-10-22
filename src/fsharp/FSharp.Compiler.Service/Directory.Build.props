@@ -15,7 +15,7 @@
   <!-- SDK targets override -->
   <PropertyGroup>
     <FSharpSourcesRoot>$(MSBuildThisFileDirectory)..\..\</FSharpSourcesRoot>
-    <VersionPrefix>2020.1.0</VersionPrefix>
+    <VersionPrefix>2020.3.0</VersionPrefix>
     <OtherFlags>--version:$(VersionPrefix)</OtherFlags>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
@@ -23,8 +23,7 @@
     <!-- The LKG FSI.EXE requires MSBuild 15 to be installed, which is painful -->
     <ToolsetFsiToolPath>$(FSharpSourcesRoot)\..\packages\FSharp.Compiler.Tools.4.1.27\tools</ToolsetFsiToolPath>
     <ToolsetFsiToolExe>fsi.exe</ToolsetFsiToolExe>
-    <FcsFSharpCorePkgVersion>4.7.0</FcsFSharpCorePkgVersion>
-    <FcsTargetNetFxFramework>net461</FcsTargetNetFxFramework>
+    <FcsFSharpCorePkgVersion>5.0.0</FcsFSharpCorePkgVersion>
   </PropertyGroup>
 
   <Import Project="$(FSharpSourcesRoot)..\eng\Versions.props" />
