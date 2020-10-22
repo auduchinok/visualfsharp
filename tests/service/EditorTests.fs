@@ -311,7 +311,6 @@ type Test() =
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
     let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(20), (fun _ -> []))|> Async.RunSynchronously
-    let item = decls.Items |> Array.tryFind (fun d -> d.Name = "abc")
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
 
 [<Test>]
@@ -328,7 +327,6 @@ type Test() =
     let parseResult, typeCheckResults =  parseAndCheckScript(file, input) 
 
     let decls = typeCheckResults.GetDeclarationListInfo(Some parseResult, 4, inputLines.[3], PartialLongName.Empty(21), (fun _ -> []))|> Async.RunSynchronously
-    let item = decls.Items |> Array.tryFind (fun d -> d.Name = "abc")
     decls.Items |> Seq.exists (fun d -> d.Name = "abc") |> shouldEqual true
  
 [<Test>]
@@ -1475,5 +1473,3 @@ let x8 = $\"\"\"abc{  {contents=1} }def{2}hij\"\"\"
           ((3, 20, 3, 21), (3, 22, 3, 23)); ((4, 16, 4, 17), (4, 18, 4, 19));
           ((4, 22, 4, 23), (4, 24, 4, 25)); ((5, 19, 5, 20), (5, 30, 5, 31));
           ((5, 16, 5, 17), (5, 32, 5, 33)); ((5, 36, 5, 37), (5, 38, 5, 39))|]
-         
-

@@ -1,9 +1,41 @@
 <Project>
-
   <PropertyGroup>
-    <UseFSharpCompilerServiceVersion>true</UseFSharpCompilerServiceVersion>
+    <NuGetPackageRoot Condition="'$(NuGetPackageRoot)' == '' AND '$(OS)' == 'Windows_NT'">$(UserProfile)\.nuget\packages\</NuGetPackageRoot>
+    <NuGetPackageRoot Condition="'$(NuGetPackageRoot)' == '' AND '$(OS)' != 'Windows_NT'">$(HOME)/.nuget/packages/</NuGetPackageRoot>
+    <NuGetPackageRoot Condition="!HasTrailingSlash('$(NuGetPackageRoot)') AND '$(OS)' == 'Windows_NT'">$(NuGetPackageRoot)\</NuGetPackageRoot>
+    <NuGetPackageRoot Condition="!HasTrailingSlash('$(NuGetPackageRoot)') AND '$(OS)' != 'Windows_NT'">$(NuGetPackageRoot)/</NuGetPackageRoot>
+    <ArtifactsDir>$(MSBuildThisFileDirectory)..\..\..\artifacts</ArtifactsDir>
+    <ArtifactsBinDir>$(ArtifactsDir)\bin</ArtifactsBinDir>
+    <ArtifactsObjDir>$(ArtifactsDir)\obj</ArtifactsObjDir>
+    <OutputPath>$(ArtifactsBinDir)\fcs\$(Configuration)</OutputPath>
+    <IntermediateOutputPath>$(ArtifactsObjDir)\fcs\$(Configuration)</IntermediateOutputPath>
+    <DisableCompilerRedirection>true</DisableCompilerRedirection>
   </PropertyGroup>
 
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <!-- SDK targets override -->
+  <PropertyGroup>
+    <FSharpSourcesRoot>$(MSBuildThisFileDirectory)..\..\</FSharpSourcesRoot>
+    <VersionPrefix>2020.1.0</VersionPrefix>
+    <OtherFlags>--version:$(VersionPrefix)</OtherFlags>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <!-- FSharp.Compiler.Tools is currently only used to get a working FSI.EXE to execute some scripts during the build -->
+    <!-- The LKG FSI.EXE requires MSBuild 15 to be installed, which is painful -->
+    <ToolsetFsiToolPath>$(FSharpSourcesRoot)\..\packages\FSharp.Compiler.Tools.4.1.27\tools</ToolsetFsiToolPath>
+    <ToolsetFsiToolExe>fsi.exe</ToolsetFsiToolExe>
+    <FcsFSharpCorePkgVersion>4.7.0</FcsFSharpCorePkgVersion>
+    <FcsTargetNetFxFramework>net461</FcsTargetNetFxFramework>
+  </PropertyGroup>
 
+  <Import Project="$(FSharpSourcesRoot)..\eng\Versions.props" />
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <DefineConstants>$(DefineConstants);FX_NO_PDB_READER</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_PDB_WRITER</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_SYMBOLSTORE</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_APP_DOMAINS</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_WIN_REGISTRY</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_SYSTEM_CONFIGURATION</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_RESHAPED_REFEMIT</DefineConstants>
+  </PropertyGroup>
 </Project>
