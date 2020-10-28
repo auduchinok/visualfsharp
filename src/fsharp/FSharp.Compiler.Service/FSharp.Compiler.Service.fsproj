@@ -14,6 +14,7 @@
     <NGenBinary>true</NGenBinary>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>fcs.snk</AssemblyOriginatorKeyFile>
+    <DocumentationFile>$(IntermediateOutputPath)$(TargetFramework)\FSharp.Compiler.Service.xml</DocumentationFile>
 
     <FsYaccOutputFolder>$(IntermediateOutputPath)$(TargetFramework)\</FsYaccOutputFolder>
     <FsLexOutputFolder>$(IntermediateOutputPath)$(TargetFramework)\</FsLexOutputFolder>
@@ -25,12 +26,6 @@
     <PackageReleaseNotes>/blob/main/release-notes.md#FSharp-Compiler-Service-$(FSharpCompilerServiceReleaseNotesVersion)</PackageReleaseNotes>
     <PackageTags>F#, fsharp, interactive, compiler, editor</PackageTags>
   </PropertyGroup>
-
-  <ItemGroup>
-    <NuspecProperty Include="FSharpCoreVersion=$(FSCorePackageVersion)" Condition="'$(VersionSuffix)'==''" />
-    <NuspecProperty Include="FSharpCoreVersion=$(FSCorePackageVersion)-$(VersionSuffix)" Condition="'$(VersionSuffix)'!=''" />
-    <NuspecProperty Include="TargetFramework=$(TargetFramework)" />
-  </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="fsc" />
