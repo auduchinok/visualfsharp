@@ -912,7 +912,7 @@ type internal TypeCheckInfo
         |> Option.map (fun (ty, _, _, _) -> FSharpType (cenv, ty))
 
     /// Get the auto-complete items at a location
-    member __.GetDeclarations (parseResultsOpt, line, lineStr, partialName, getAllSymbols, unresolvedOnly, hasTextChangedSinceLastTypecheck) =
+    member __.GetDeclarations (parseResultsOpt, line, lineStr, partialName, getAllSymbols, unresolvedOnly) =
         let isInterfaceFile = SourceFileImpl.IsInterfaceFile mainInputFileName
         ErrorScope.Protect Range.range0 
             (fun () ->
@@ -1894,9 +1894,9 @@ type FSharpCheckFileResults
                 let cenv = scope.SymbolEnv
                 [| for symbolUse in scope.ScopeSymbolUses.AllUsesOfSymbols do
                     cancellationToken |> Option.iter (fun ct -> ct.ThrowIfCancellationRequested())
-                        if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
-                            let symbol = FSharpSymbol.Create(cenv, symbolUse.Item)
-                            yield FSharpSymbolUse(scope.TcGlobals, symbolUse.DisplayEnv, symbol, symbolUse.ItemOccurence, symbolUse.Range) |])
+                    if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
+                        let symbol = FSharpSymbol.Create(cenv, symbolUse.Item)
+                        yield FSharpSymbolUse(scope.TcGlobals, symbolUse.DisplayEnv, symbol, symbolUse.ItemOccurence, symbolUse.Range) |])
 
     member __.GetUsesOfSymbolInFile(symbol:FSharpSymbol, ?cancellationToken: CancellationToken) = 
         threadSafeOp 
@@ -2112,11 +2112,10 @@ type FSharpCheckProjectResults
         let cenv = SymbolEnv(tcGlobals, thisCcu, Some ccuSig, tcImports)
 
         [| for r in tcSymbolUses do
-            for symbolUseChunk in r.AllUsesOfSymbols do
-                for symbolUse in symbolUseChunk do
-                    if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
-                      let symbol = FSharpSymbol.Create(cenv, symbolUse.Item)
-                      yield FSharpSymbolUse(tcGlobals, symbolUse.DisplayEnv, symbol, symbolUse.ItemOccurence, symbolUse.Range) |]
+            for symbolUse in r.AllUsesOfSymbols do
+                if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
+                  let symbol = FSharpSymbol.Create(cenv, symbolUse.Item)
+                  yield FSharpSymbolUse(tcGlobals, symbolUse.DisplayEnv, symbol, symbolUse.ItemOccurence, symbolUse.Range) |]
 
     member __.ProjectContext = 
         let (tcGlobals, tcImports, thisCcu, _ccuSig, _tcSymbolUses, _topAttribs, _tcAssemblyData, _ilAssemRef, ad, _tcAssemblyExpr, _dependencyFiles) = getDetails()
