@@ -2112,6 +2112,7 @@ type FSharpCheckProjectResults
         let (tcGlobals, tcImports, thisCcu, ccuSig, tcSymbolUses, _topAttribs, _tcAssemblyData, _ilAssemRef, _ad, _tcAssemblyExpr, _dependencyFiles) = getDetails()
         let cenv = SymbolEnv(tcGlobals, thisCcu, Some ccuSig, tcImports)
 
+        cancellationToken |> Option.iter (fun ct -> ct.ThrowIfCancellationRequested())
         [| for r in tcSymbolUses do
             for symbolUse in r.AllUsesOfSymbols do
                 if symbolUse.ItemOccurence <> ItemOccurence.RelatedText then
