@@ -347,6 +347,12 @@ type SynBindingKind =
 type SynTyparDecl =
     | TyparDecl of attributes: SynAttributes * SynTypar
 
+
+/// List of type parameter declarations enclosed in `< ... >` (postfix) or `( ... )` (prefix),
+/// or a single prefix parameter.
+type SynTyparDeclList =
+    | TyparDeclList of decls: SynTyparDecl list * range: range
+
 /// The unchecked abstract syntax tree of F# type constraints
 [<NoEquality; NoComparison>]
 type SynTypeConstraint =
@@ -1737,7 +1743,7 @@ type SynField =
 type SynComponentInfo =
     | ComponentInfo of
         attributes: SynAttributes *
-        typeParams: SynTyparDecl list *
+        typeParams: SynTyparDeclList option *
         constraints: SynTypeConstraint list *
         longId: LongIdent *
         xmlDoc: PreXmlDoc *
@@ -1802,9 +1808,8 @@ type SynArgInfo =
 /// Represents the names and other metadata for the type parameters for a member or function
 [<NoEquality; NoComparison>]
 type SynValTyparDecls =
-
     | SynValTyparDecls of
-        typars: SynTyparDecl list *
+        typars: SynTyparDeclList option *
         canInfer: bool *
         constraints: SynTypeConstraint list
 

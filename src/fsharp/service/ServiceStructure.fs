@@ -537,7 +537,7 @@ module Structure =
                     parseAttributes attrs
             | _ -> ()
 
-        and parseTypeDefn (TypeDefn(ComponentInfo(_, typeArgs, _, _, _, _, _, r), objectModel, members, fullrange)) = 
+        and parseTypeDefn (TypeDefn(ComponentInfo(_, TyparDecls typeArgs, _, _, _, _, _, r), objectModel, members, fullrange)) = 
            let typeArgsRange = rangeOfTypeArgsElse r typeArgs
            let collapse = Range.endToEnd (Range.modEnd 1 typeArgsRange) fullrange
            match objectModel with
@@ -750,7 +750,7 @@ module Structure =
                 parseTypeDefnSig typeDefSig
             | _ -> ()
 
-        and parseTypeDefnSig (TypeDefnSig (ComponentInfo(attribs, typeArgs, _, longId, _, _, _, r) as __, objectModel, memberSigs, _)) = 
+        and parseTypeDefnSig (TypeDefnSig (ComponentInfo(attribs, TyparDecls typeArgs, _, longId, _, _, _, r) as __, objectModel, memberSigs, _)) = 
             parseAttributes attribs
 
             let makeRanges memberSigs =

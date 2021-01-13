@@ -3155,7 +3155,7 @@ module EstablishTypeDefinitionCores =
     let TypeNamesInMutRecDecls cenv env (compDecls: MutRecShapes<MutRecDefnsPhase1DataForTycon * 'MemberInfo, 'LetInfo, SynComponentInfo>) =
         [ for d in compDecls do 
                 match d with 
-                | MutRecShape.Tycon (MutRecDefnsPhase1DataForTycon(ComponentInfo(_, typars, _, ids, _, _, _, _), _, _, _, _, isAtOriginalTyconDefn), _) -> 
+                | MutRecShape.Tycon (MutRecDefnsPhase1DataForTycon(ComponentInfo(_, TyparDecls typars, _, ids, _, _, _, _), _, _, _, _, isAtOriginalTyconDefn), _) -> 
                     if isAtOriginalTyconDefn && (TcTyparDecls cenv env typars |> List.forall (fun p -> p.Kind = TyparKind.Measure)) then 
                         yield (List.last ids).idText
                 | _ -> () ]
@@ -3165,7 +3165,7 @@ module EstablishTypeDefinitionCores =
             [ for def in defs do 
                 match def with 
                 | SynModuleDecl.Types (typeSpecs, _) -> 
-                    for (TypeDefn(ComponentInfo(_, typars, _, ids, _, _, _, _), trepr, _, _)) in typeSpecs do 
+                    for (TypeDefn(ComponentInfo(_, TyparDecls typars, _, ids, _, _, _, _), trepr, _, _)) in typeSpecs do 
                         if isNil typars then
                             match trepr with 
                             | SynTypeDefnRepr.ObjectModel(TyconAugmentation, _, _) -> ()
@@ -3178,7 +3178,7 @@ module EstablishTypeDefinitionCores =
             [ for def in defs do 
                match def with 
                | SynModuleSigDecl.Types (typeSpecs, _) -> 
-                  for (TypeDefnSig(ComponentInfo(_, typars, _, ids, _, _, _, _), trepr, extraMembers, _)) in typeSpecs do 
+                  for (TypeDefnSig(ComponentInfo(_, TyparDecls typars, _, ids, _, _, _, _), trepr, extraMembers, _)) in typeSpecs do 
                       if isNil typars then
                           match trepr with 
                           | SynTypeDefnSigRepr.Simple((SynTypeDefnSimpleRepr.None _), _) when not (isNil extraMembers) -> ()
@@ -3213,7 +3213,7 @@ module EstablishTypeDefinitionCores =
     /// but 
     ///    - we don't yet 'properly' establish constraints on type parameters
     let private TcTyconDefnCore_Phase1A_BuildInitialTycon (cenv: cenv) env parent (MutRecDefnsPhase1DataForTycon(synTyconInfo, synTyconRepr, _, preEstablishedHasDefaultCtor, hasSelfReferentialCtor, _)) = 
-        let (ComponentInfo (_, synTypars, _, id, doc, preferPostfix, synVis, _)) = synTyconInfo
+        let (ComponentInfo (_, TyparDecls synTypars, _, id, doc, preferPostfix, synVis, _)) = synTyconInfo
         let checkedTypars = TcTyparDecls cenv env synTypars
         id |> List.iter (CheckNamespaceModuleOrTypeName cenv.g)
         match synTyconRepr with 
@@ -3285,7 +3285,7 @@ module EstablishTypeDefinitionCores =
     ///  synTyconInfo: Syntactic AST for the name, attributes etc. of the type constructor
     ///  synTyconRepr: Syntactic AST for the RHS of the type definition
     let private TcTyconDefnCore_Phase1B_EstablishBasicKind (cenv: cenv) inSig envinner (MutRecDefnsPhase1DataForTycon(synTyconInfo, synTyconRepr, _, _, _, _)) (tycon: Tycon) = 
-        let (ComponentInfo(Attributes synAttrs, typars, _, _, _, _, _, _)) = synTyconInfo
+        let (ComponentInfo(Attributes synAttrs, TyparDecls typars, _, _, _, _, _, _)) = synTyconInfo
         let m = tycon.Range
         let id = tycon.Id
 
@@ -4489,7 +4489,7 @@ module TcDeclarations =
 
     /// Given a type definition, compute whether its members form an extension of an existing type, and if so if it is an 
     /// intrinsic or extrinsic extension
-    let private ComputeTyconDeclKind (cenv: cenv) (envForDecls: TcEnv) tyconOpt isAtOriginalTyconDefn inSig m (synTypars: SynTyparDecl list) synTyparCxs longPath = 
+    let private ComputeTyconDeclKind (cenv: cenv) (envForDecls: TcEnv) tyconOpt isAtOriginalTyconDefn inSig m (TyparDecls synTypars) synTyparCxs longPath = 
         let g = cenv.g
         let ad = envForDecls.AccessRights
         
@@ -5106,7 +5106,7 @@ let rec TcSignatureElementNonMutRec cenv parent typeNames endm (env: TcEnv) synS
             let enclosingNamespacePath, defs = 
                 if kind.IsModule then 
                     let nsp, modName = List.frontAndBack longId
-                    let modDecl = [SynModuleSigDecl.NestedModule(ComponentInfo(attribs, [], [], [modName], xml, false, vis, m), false, defs, m)] 
+                    let modDecl = [SynModuleSigDecl.NestedModule(ComponentInfo(attribs, None, [], [modName], xml, false, vis, m), false, defs, m)] 
                     nsp, modDecl
                 else 
                     longId, defs
@@ -5195,7 +5195,7 @@ and TcSignatureElementsMutRec cenv parent typeNames m mutRecNSInfo envInitial (d
 
                 | SynModuleSigDecl.Exception (SynExceptionSig(exnRepr, members, _), _) ->
                       let ( SynExceptionDefnRepr(synAttrs, UnionCase(_, id, _args, _, _, _), _, doc, vis, m)) = exnRepr
-                      let compInfo = ComponentInfo(synAttrs, [], [], [id], doc, false, vis, id.idRange)
+                      let compInfo = ComponentInfo(synAttrs, None, [], [id], doc, false, vis, id.idRange)
                       let decls = [ MutRecShape.Tycon(SynTypeDefnSig.TypeDefnSig(compInfo, SynTypeDefnSigRepr.Exception exnRepr, members, m)) ]
                       decls, (false, false)
 
@@ -5418,7 +5418,7 @@ let rec TcModuleOrNamespaceElementNonMutRec (cenv: cenv) parent typeNames scopem
           let enclosingNamespacePath, defs = 
               if kind.IsModule then 
                   let nsp, modName = List.frontAndBack longId
-                  let modDecl = [SynModuleDecl.NestedModule(ComponentInfo(attribs, [], [], [modName], xml, false, vis, m), false, defs, true, m)] 
+                  let modDecl = [SynModuleDecl.NestedModule(ComponentInfo(attribs, None, [], [modName], xml, false, vis, m), false, defs, true, m)] 
                   nsp, modDecl
               else 
                   longId, defs
@@ -5527,7 +5527,7 @@ and TcModuleOrNamespaceElementsMutRec (cenv: cenv) parent typeNames m envInitial
 
               | SynModuleDecl.Exception (SynExceptionDefn(repr, members, _), _m) -> 
                   let (SynExceptionDefnRepr(synAttrs, UnionCase(_, id, _args, _, _, _), _repr, doc, vis, m)) = repr
-                  let compInfo = ComponentInfo(synAttrs, [], [], [id], doc, false, vis, id.idRange)
+                  let compInfo = ComponentInfo(synAttrs, None, [], [id], doc, false, vis, id.idRange)
                   let decls = [ MutRecShape.Tycon(SynTypeDefn.TypeDefn(compInfo, SynTypeDefnRepr.Exception repr, members, m)) ]
                   decls, (false, false, attrs)
 

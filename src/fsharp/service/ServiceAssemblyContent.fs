@@ -503,7 +503,7 @@ module ParsedInput =
             | SynPat.LongIdent (ident, _, typars, ConstructorPats pats, _, _) ->
                 addLongIdentWithDots ident
                 typars
-                |> Option.iter (fun (SynValTyparDecls (typars, _, constraints)) ->
+                |> Option.iter (fun (SynValTyparDecls (TyparDecls typars, _, constraints)) ->
                      List.iter walkTyparDecl typars
                      List.iter walkTypeConstraint constraints)
                 List.iter walkPat pats
@@ -736,7 +736,7 @@ module ParsedInput =
             | SynTypeDefnSimpleRepr.TypeAbbrev (_, t, _) -> walkType t
             | _ -> ()
     
-        and walkComponentInfo isTypeExtensionOrAlias (ComponentInfo(Attributes attrs, typars, constraints, longIdent, _, _, _, _)) =
+        and walkComponentInfo isTypeExtensionOrAlias (ComponentInfo(Attributes attrs, TyparDecls typars, constraints, longIdent, _, _, _, _)) =
             List.iter walkAttribute attrs
             List.iter walkTyparDecl typars
             List.iter walkTypeConstraint constraints

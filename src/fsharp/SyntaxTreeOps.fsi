@@ -153,6 +153,7 @@ val mkAttributeList: attrs:SynAttribute list -> range:range -> SynAttributeList 
 val ConcatAttributesLists: attrsLists:SynAttributeList list -> SynAttribute list
 
 val ( |Attributes| ): synAttributes:SynAttributeList list -> SynAttribute list
+val ( |TyparDecls| ): SynTyparDeclList option -> SynTyparDecl list
 
 val rangeOfNonNilAttrs: attrs:SynAttributes -> range
 

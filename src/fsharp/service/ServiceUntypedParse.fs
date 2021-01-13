@@ -1008,7 +1008,7 @@ module UntypedParseImpl =
                 ifPosInRange r (fun _ -> kind)
                 |> Option.orElse (
                     typars 
-                    |> Option.bind (fun (SynValTyparDecls (typars, _, constraints)) -> 
+                    |> Option.bind (fun (SynValTyparDecls (TyparDecls typars, _, constraints)) -> 
                         List.tryPick walkTyparDecl typars
                         |> Option.orElse (List.tryPick walkTypeConstraint constraints)))
                 |> Option.orElse (List.tryPick walkPat pats)
@@ -1200,7 +1200,7 @@ module UntypedParseImpl =
             | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType t
             | _ -> None
 
-        and walkComponentInfo isModule (ComponentInfo(Attributes attrs, typars, constraints, _, _, _, _, r)) =
+        and walkComponentInfo isModule (ComponentInfo(Attributes attrs, TyparDecls typars, constraints, _, _, _, _, r)) =
             if isModule then None else ifPosInRange r (fun _ -> Some EntityKind.Type)
             |> Option.orElse (
                 List.tryPick walkAttribute attrs

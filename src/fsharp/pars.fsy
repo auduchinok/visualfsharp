@@ -796,7 +796,7 @@ moduleSpfn:
       { let isRec, path, xml, vis = $3 
         if not (isSingleton path) then raiseParseErrorAt (rhs parseState 3) (FSComp.SR.parsModuleDefnMustBeSimpleName())
         if isRec then raiseParseErrorAt (rhs parseState 3) (FSComp.SR.parsInvalidUseOfRec())
-        let info = ComponentInfo($1, [], [], path, xml, false, vis, rhs parseState 3)
+        let info = ComponentInfo($1, None, [], path, xml, false, vis, rhs parseState 3)
         if Option.isSome $2 then errorR(Error(FSComp.SR.parsVisibilityDeclarationsShouldComePriorToIdentifier(), rhs parseState 2))
         SynModuleSigDecl.NestedModule(info, isRec, $5, rhs2 parseState 1 5) }
 
@@ -1300,7 +1300,7 @@ moduleDefn:
             [ SynModuleDecl.ModuleAbbrev(List.head path, eqn, (rhs parseState 3, eqn) ||> unionRangeWithListBy (fun id -> id.idRange) ) ]
         | Choice2Of2 def -> 
             if not (isSingleton path) then raiseParseErrorAt (rhs parseState 3) (FSComp.SR.parsModuleAbbreviationMustBeSimpleName())
-            let info = ComponentInfo(attribs, [], [], path, xml, false, vis, rhs parseState 3)
+            let info = ComponentInfo(attribs, None, [], path, xml, false, vis, rhs parseState 3)
             [ SynModuleDecl.NestedModule(info, isRec, def, false, (rhs2 parseState 1 4, def) ||> unionRangeWithListBy (fun d -> d.Range) ) ] }
 
   /* unattached custom attributes */
@@ -2259,18 +2259,21 @@ interfaceMember:
 
 tyconNameAndTyparDecls:  
   | opt_access path 
-      { [], $2.Lid, false, [], $1, grabXmlDoc(parseState, 2) }
+      { None, $2.Lid, false, [], $1, grabXmlDoc(parseState, 2) }
 
-  | opt_access prefixTyparDecls  path
-      { $2, $3.Lid, false, [], $1, grabXmlDoc(parseState, 2) }
+  | opt_access prefixTyparDecls path
+      { Some $2, $3.Lid, false, [], $1, grabXmlDoc(parseState, 2) }
 
   | opt_access path postfixTyparDecls 
       { let tps, tpcs = $3 
-        tps, $2.Lid, true, tpcs, $1, grabXmlDoc(parseState, 2) }
+        Some tps, $2.Lid, true, tpcs, $1, grabXmlDoc(parseState, 2) }
 
 prefixTyparDecls:
-  | typar { [ TyparDecl([], $1) ] }
-  | LPAREN typarDeclList rparen {  List.rev $2 }
+  | typar
+      { TyparDeclList ([ TyparDecl([], $1) ], rhs parseState 1) }
+
+  | LPAREN typarDeclList rparen
+      { TyparDeclList (List.rev $2, rhs2 parseState 2 5) }
 
 typarDeclList: 
   | typarDeclList COMMA typarDecl { $3 :: $1 } 
@@ -2284,8 +2287,9 @@ typarDecl :
 /* See the F# specification "Lexical analysis of type applications and type parameter definitions" */
 postfixTyparDecls: 
   | opt_HIGH_PRECEDENCE_TYAPP LESS typarDeclList opt_typeConstraints GREATER 
-      { if not $2 then warning(Error(FSComp.SR.parsNonAdjacentTypars(), rhs2 parseState 2 5))
-        List.rev $3, $4 }
+      { let m = rhs2 parseState 2 5
+        if not $2 then warning(Error(FSComp.SR.parsNonAdjacentTypars(), m))
+        TyparDeclList (List.rev $3, m), $4 }
 
 /* Any tokens in this grammar must be added to the lex filter rule 'peekAdjacentTypars' */
 /* See the F# specification "Lexical analysis of type applications and type parameter definitions" */
@@ -2301,15 +2305,17 @@ explicitValTyparDeclsCore:
 
 explicitValTyparDecls: 
   | opt_HIGH_PRECEDENCE_TYAPP LESS explicitValTyparDeclsCore opt_typeConstraints GREATER 
-      { if not $2 then warning(Error(FSComp.SR.parsNonAdjacentTypars(), rhs2 parseState 2 5))
-        let tps, flex = $3 
-        SynValTyparDecls(tps, flex, $4) }
+      { let m = rhs2 parseState 2 5
+        if not $2 then warning(Error(FSComp.SR.parsNonAdjacentTypars(), m))
+        let tps, flex = $3
+        let tps = TyparDeclList (tps, m)
+        SynValTyparDecls(Some tps, flex, $4) }
 
 opt_explicitValTyparDecls: 
   | explicitValTyparDecls 
       { $1 } 
   |       
-      { SynValTyparDecls([], true, []) }
+      { SynValTyparDecls(None, true, []) }
 
 opt_explicitValTyparDecls2: 
   | explicitValTyparDecls 
